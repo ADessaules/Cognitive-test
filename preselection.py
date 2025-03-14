@@ -6,7 +6,7 @@ import os
 
 # --- Configuration des fichiers ---
 DB_FILE = "patients.db"  # Base de données SQLite pour stocker les patients et célébrités
-DOSSIER_IMAGES = "C:\\Users\\Paul\\Downloads\\Pyth\\image"
+DOSSIER_IMAGES = "C:\\Users\\Paul\\Documents\\GitHub\\Cognitive-test\\image"
 
 
 # --- Création de la base de données ---
