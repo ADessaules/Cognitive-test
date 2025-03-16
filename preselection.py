@@ -1,29 +1,24 @@
-import tkinter as tk
-from tkinter import messagebox, simpledialog
-from PIL import Image, ImageTk
+from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QLabel, QVBoxLayout, QHBoxLayout, QDialog, QInputDialog, QMessageBox, QListWidget, QGridLayout
+from PyQt6.QtGui import QPixmap
 import sqlite3
 import os
+import glob
 
-# --- Configuration des fichiers ---
-DB_FILE = "patients.db"  # Base de données SQLite pour stocker les patients et célébrités
-DOSSIER_IMAGES = "C:\\Users\\Paul\\Documents\\GitHub\\Cognitive-test\\image"
 
+# --- Configuration ---
+DB_FILE = "patients.db"
+DOSSIER_IMAGES = "C:\\Users\\Paul\\Downloads\\Pyth\\image"
 
 # --- Création de la base de données ---
 def creer_base():
-    """Crée la base de données des patients et célébrités si elle n'existe pas."""
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
-    
-    # Table des patients
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS patients (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nom TEXT
         )
     """)
-    
-    # Table des célébrités reconnues par chaque patient
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS selections (
             patient_id INTEGER,
@@ -32,204 +27,186 @@ def creer_base():
             FOREIGN KEY(patient_id) REFERENCES patients(id)
         )
     """)
-    
     conn.commit()
     conn.close()
 
-# --- Gestion des patients ---
-def creer_patient():
-    """Demande le nom du patient et l'ajoute à la base de données."""
-    global current_patient_id
-    nom = simpledialog.askstring("Nouveau Patient", "Entrez l'ID du patient :")
-    if nom:
-        conn = sqlite3.connect(DB_FILE)
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO patients (nom) VALUES (?)", (nom,))
-        conn.commit()
-        current_patient_id = cursor.lastrowid  # Récupère l'ID du patient ajouté
-        conn.close()
-        afficher_selection()
-        charger_celebrites()
-
-def charger_celebrites():
-    """Charge une liste de célébrités en utilisant un dossier d'images commun."""
-    global celebrites
-    noms = ["Brad Pitt", "Angelina Jolie", "Leonardo DiCaprio"]
-    fichiers = ["bradpitt.webp", "jolie.webp", "dicaprio.webp"]
+# --- Classe principale ---
+class MainApp(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Reconnaissance de célébrités")
+        self.setGeometry(100, 100, 600, 700)
+        
+        self.layout = QVBoxLayout()
+        self.btn_creer_patient = QPushButton("Créer Patient")
+        self.btn_liste_patients = QPushButton("Voir Patients")
+        self.btn_supprimer_patient = QPushButton("Supprimer Patient")
+        
+        self.btn_creer_patient.clicked.connect(self.creer_patient)
+        self.btn_liste_patients.clicked.connect(self.afficher_liste_patients)
+        self.btn_supprimer_patient.clicked.connect(self.afficher_liste_patients_supprimer)
+        
+        self.layout.addWidget(self.btn_creer_patient)
+        self.layout.addWidget(self.btn_liste_patients)
+        self.layout.addWidget(self.btn_supprimer_patient)
+        
+        self.setLayout(self.layout)
     
-    celebrites = [{"nom": nom, "image": os.path.join(DOSSIER_IMAGES, fichier)} for nom, fichier in zip(noms, fichiers)]
-    
-    afficher_celebrite()
-
-# --- Présélection des célébrités ---
-current_patient_id = None
-celebrites = []
-current_celebrity = None
-img_tk = None
-
-def afficher_selection():
-    """Affiche l'écran de sélection des célébrités."""
-    frame_top.pack_forget()
-    frame_selection.pack(pady=20)
-
-def afficher_celebrite():
-    """Affiche la prochaine célébrité de la liste."""
-    global current_celebrity, img_tk
-    if not celebrites:
-        messagebox.showinfo("Terminé", "Sélection terminée.")
-        retour_menu()
-        return
-    
-    current_celebrity = celebrites.pop(0)
-    try:
-        img = Image.open(current_celebrity["image"])
-        img = img.resize((400, 400))
-        img_tk = ImageTk.PhotoImage(img)
-        photo_label.config(image=img_tk)
-        nom_label.config(text=current_celebrity["nom"])
-    except FileNotFoundError:
-        connu()
-
-def connu():
-    """Ajoute la célébrité reconnue en base de données et passe à la suivante."""
-    if current_patient_id:
-        conn = sqlite3.connect(DB_FILE)
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO selections (patient_id, nom, image) VALUES (?, ?, ?)",
-                       (current_patient_id, current_celebrity["nom"], current_celebrity["image"]))
-        conn.commit()
-        conn.close()
-    afficher_celebrite()
-
-def inconnu():
-    """Passe à la prochaine célébrité sans l'ajouter."""
-    afficher_celebrite()
-
-def retour_menu():
-    """Retourne au menu principal."""
-    frame_selection.pack_forget()
-    frame_top.pack(pady=20)
-
-# --- Affichage des patients et de leur sélection ---
-def afficher_liste_patients():
-    """Affiche les patients sous forme de boutons cliquables."""
-    liste_fenetre = tk.Toplevel(root)
-    liste_fenetre.title("Liste des patients")
-    liste_fenetre.geometry("600x600")
-    
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, nom FROM patients")
-    patients = cursor.fetchall()
-    conn.close()
-    
-    for patient in patients:
-        patient_id, nom = patient
-        btn = tk.Button(liste_fenetre, text=nom, font=("Arial", 14), bg="#007BFF", fg="white", width=20, height=2,
-                         command=lambda p=patient_id: afficher_details_patient(p))
-        btn.pack(pady=5)
-
-def afficher_liste_patients_supprimer():
-    """Affiche les patients sous forme de boutons cliquables et permet de les supprimer."""
-    liste_fenetre = tk.Toplevel(root)
-    liste_fenetre.title("Supprimer un Patient")
-    liste_fenetre.geometry("600x600")
-    
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, nom FROM patients")
-    patients = cursor.fetchall()
-    conn.close()
-    
-    for patient in patients:
-        patient_id, nom = patient
-        btn = tk.Button(liste_fenetre, text=nom, font=("Arial", 14), bg="#dc3545", fg="white", width=20, height=2,
-                         command=lambda p=patient_id: supprimer_patient(p, liste_fenetre))
-        btn.pack(pady=5)
-
-def supprimer_patient(patient_id, fenetre):
-    """Supprime le patient et ses sélections associées de la base de données."""
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    
-    # Supprime les sélections associées à ce patient
-    cursor.execute("DELETE FROM selections WHERE patient_id = ?", (patient_id,))
-    
-    # Supprime le patient
-    cursor.execute("DELETE FROM patients WHERE id = ?", (patient_id,))
-    
-    conn.commit()
-    conn.close()
-    
-    # Fermer la fenêtre de suppression
-    fenetre.destroy()
-    
-    messagebox.showinfo("Supprimé", "Le patient a été supprimé avec succès.")
-
-def afficher_details_patient(patient_id):
-    """Affiche les célébrités gardées par un patient."""
-    details_fenetre = tk.Toplevel(root)
-    details_fenetre.title("Détails du Patient")
-    details_fenetre.geometry("500x500")
-    
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT nom, image FROM selections WHERE patient_id = ?", (patient_id,))
-    celebrites = cursor.fetchall()
-    conn.close()
-    
-    # Création d'un cadre pour organiser les célébrités en ligne
-    frame_images = tk.Frame(details_fenetre)
-    frame_images.pack(pady=20)
-
-    for celeb in celebrites:
-        nom, image_path = celeb
-        try:
-            img = Image.open(image_path)
-            img = img.resize((150, 150))
-            img_tk = ImageTk.PhotoImage(img)
+    def creer_patient(self):
+        nom, ok = QInputDialog.getText(self, "Nouveau Patient", "Entrez l'ID du patient :")
+        if ok and nom:
+            conn = sqlite3.connect(DB_FILE)
+            cursor = conn.cursor()
+            cursor.execute("INSERT INTO patients (nom) VALUES (?)", (nom,))
+            conn.commit()
+            patient_id = cursor.lastrowid
+            conn.close()
             
-            # Frame pour chaque célébrité
-            celeb_frame = tk.Frame(frame_images)
-            celeb_frame.pack(side=tk.LEFT, padx=10)
+            self.selection_fenetre = SelectionCelebrites(patient_id)
+            self.selection_fenetre.show()
 
-            # Image
-            img_label = tk.Label(celeb_frame, image=img_tk)
-            img_label.image = img_tk
-            img_label.pack()
+    def afficher_liste_patients(self):
+        self.liste_patients_fenetre = ListePatients()
+        self.liste_patients_fenetre.show()
+    
+    def afficher_liste_patients_supprimer(self):
+        self.supprimer_patients_fenetre = ListePatients(supprimer=True)
+        self.supprimer_patients_fenetre.show()
 
-            # Nom
-            nom_label = tk.Label(celeb_frame, text=nom, font=("Arial", 12))
-            nom_label.pack()
-        except FileNotFoundError:
-            continue  # Passe l'affichage si l'image n'existe pas
+# --- Fenêtre de sélection des célébrités ---
+class SelectionCelebrites(QDialog):
+    def __init__(self, patient_id):
+        super().__init__()
+        self.setWindowTitle("Sélection des célébrités")
+        self.setGeometry(200, 200, 500, 600)
+        self.patient_id = patient_id
+        
+        self.layout = QVBoxLayout()
+        self.nom_label = QLabel("")
+        self.image_label = QLabel()
+        self.btn_connu = QPushButton("Connu")
+        self.btn_inconnu = QPushButton("Inconnu")
+        
+        self.btn_connu.clicked.connect(self.enregistrer_connu)
+        self.btn_inconnu.clicked.connect(self.passer)
+        
+        self.layout.addWidget(self.image_label)
+        self.layout.addWidget(self.nom_label)
+        self.layout.addWidget(self.btn_connu)
+        self.layout.addWidget(self.btn_inconnu)
+        
+        self.setLayout(self.layout)
+        
+        self.celebrites = [{"nom": os.path.splitext(os.path.basename(f))[0].replace("_", " "), "image": f} 
+                   for f in glob.glob(os.path.join(DOSSIER_IMAGES, "*.webp"))]
 
-# --- Interface graphique ---
-root = tk.Tk()
-root.title("Reconnaissance de célébrités")
-root.geometry("600x700")
-root.configure(bg="#f4f4f4")
+        self.afficher_celebrite()
 
-# Page d'accueil
-frame_top = tk.Frame(root, bg="#f4f4f4")
-frame_top.pack(pady=20)
-btn_patient = tk.Button(frame_top, text="Créer Patient", command=creer_patient, bg="#007BFF", fg="white", font=("Arial", 16), width=15, height=2)
-btn_patient.pack()
-btn_liste = tk.Button(frame_top, text="Voir Patients", command=afficher_liste_patients, bg="#17a2b8", fg="white", font=("Arial", 16), width=15, height=2)
-btn_liste.pack(pady=10)
-btn_supprimer = tk.Button(frame_top, text="Supprimer Patient", command=afficher_liste_patients_supprimer, bg="#dc3545", fg="white", font=("Arial", 16), width=15, height=2)
-btn_supprimer.pack(pady=10)
+    
+    def afficher_celebrite(self):
+        if not self.celebrites:
+            QMessageBox.information(self, "Terminé", "Sélection terminée.")
+            self.close()
+            return
+        
+        self.current_celebrite = self.celebrites.pop(0)
+        self.nom_label.setText(self.current_celebrite["nom"])
+        
+        image_path = self.current_celebrite["image"]
+        if os.path.exists(image_path):
+            pixmap = QPixmap(image_path).scaled(200, 200)
+            self.image_label.setPixmap(pixmap)
+        else:
+            self.passer()
 
-# Interface de présélection
-frame_selection = tk.Frame(root, bg="#f4f4f4")
-photo_label = tk.Label(frame_selection, bg="#f4f4f4")
-photo_label.pack(pady=20)
-nom_label = tk.Label(frame_selection, font=("Arial", 24, "bold"), bg="#f4f4f4")
-nom_label.pack()
-btn_connu = tk.Button(frame_selection, text="Connu", command=connu, bg="green", fg="white", font=("Arial", 16), width=10)
-btn_connu.pack(side=tk.LEFT, padx=20)
-btn_inconnu = tk.Button(frame_selection, text="Inconnu", command=inconnu, bg="red", fg="white", font=("Arial", 16), width=10)
-btn_inconnu.pack(side=tk.RIGHT, padx=20)
+    def enregistrer_connu(self):
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO selections (patient_id, nom, image) VALUES (?, ?, ?)", 
+                       (self.patient_id, self.current_celebrite["nom"], self.current_celebrite["image"]))
+        conn.commit()
+        conn.close()
+        self.afficher_celebrite()
+    
+    def passer(self):
+        self.afficher_celebrite()
 
-creer_base()
-root.mainloop()
+# --- Fenêtre de liste des patients ---
+class ListePatients(QDialog):
+    def __init__(self, supprimer=False):
+        super().__init__()
+        self.setWindowTitle("Liste des patients" if not supprimer else "Supprimer un Patient")
+        self.setGeometry(200, 200, 400, 500)
+        self.layout = QVBoxLayout()
+        
+        self.liste_widget = QListWidget()
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, nom FROM patients")
+        self.patients = cursor.fetchall()
+        conn.close()
+        
+        for patient in self.patients:
+            self.liste_widget.addItem(f"{patient[1]}")
+        
+        self.layout.addWidget(self.liste_widget)
+        self.setLayout(self.layout)
+        
+        self.liste_widget.itemClicked.connect(self.supprimer_patient if supprimer else self.afficher_details_patient)
+    
+    def supprimer_patient(self, item):
+        index = self.liste_widget.row(item)
+        patient_id = self.patients[index][0]
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM selections WHERE patient_id = ?", (patient_id,))
+        cursor.execute("DELETE FROM patients WHERE id = ?", (patient_id,))
+        conn.commit()
+        conn.close()
+        QMessageBox.information(self, "Supprimé", "Le patient a été supprimé avec succès.")
+        self.liste_widget.takeItem(index)
+    
+    def afficher_details_patient(self, item):
+        index = self.liste_widget.row(item)
+        patient_id = self.patients[index][0]
+        self.details_fenetre = DetailsPatient(patient_id)
+        self.details_fenetre.show()
+
+# --- Fenêtre des détails d'un patient ---
+class DetailsPatient(QDialog):
+    def __init__(self, patient_id):
+        super().__init__()
+        self.setWindowTitle("Détails du Patient")
+        self.setGeometry(250, 250, 500, 500)
+        self.layout = QGridLayout()
+        
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT nom, image FROM selections WHERE patient_id = ?", (patient_id,))
+        celebrites = cursor.fetchall()
+        conn.close()
+        
+        row, col = 0, 0
+        for celeb in celebrites:
+            nom, image_path = celeb
+            label = QLabel(nom)
+            img_label = QLabel()
+            if os.path.exists(image_path):
+                pixmap = QPixmap(image_path).scaled(150, 150)
+                img_label.setPixmap(pixmap)
+            self.layout.addWidget(img_label, row, col)
+            self.layout.addWidget(label, row+1, col)
+            col += 1
+            if col >= 3:
+                col = 0
+                row += 2
+        
+        self.setLayout(self.layout)
+
+# --- Exécution de l'application ---
+if __name__ == "__main__":
+    creer_base()
+    app = QApplication([])
+    main_window = MainApp()
+    main_window.show()
+    app.exec()
