@@ -40,9 +40,17 @@ class MainApp(QWidget):
         
         self.layout = QVBoxLayout()
         self.btn_creer_patient = QPushButton("Créer Patient")
+        self.btn_creer_patient.setFixedHeight(60)
+        self.btn_creer_patient.setStyleSheet("font-size: 18px;")
+
         self.btn_liste_patients = QPushButton("Voir Patients")
+        self.btn_liste_patients.setFixedHeight(60)
+        self.btn_liste_patients.setStyleSheet("font-size: 18px;")
+
         self.btn_supprimer_patient = QPushButton("Supprimer Patient")
-        
+        self.btn_supprimer_patient.setFixedHeight(60)
+        self.btn_supprimer_patient.setStyleSheet("font-size: 18px;")
+ 
         self.btn_creer_patient.clicked.connect(self.creer_patient)
         self.btn_liste_patients.clicked.connect(self.afficher_liste_patients)
         self.btn_supprimer_patient.clicked.connect(self.afficher_liste_patients_supprimer)
@@ -84,17 +92,14 @@ class SelectionCelebrites(QDialog):
 
         self.layout = QVBoxLayout()
 
-        # Image centrée
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.image_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        # Nom centré
         self.nom_label = QLabel("")
         self.nom_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.nom_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        # Boutons centrés dans une ligne
         btn_layout = QHBoxLayout()
         self.btn_connu = QPushButton("Connu")
         self.btn_inconnu = QPushButton("Inconnu")
