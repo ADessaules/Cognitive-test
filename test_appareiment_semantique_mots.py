@@ -1,5 +1,5 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, QMessageBox
+from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, QMessageBox, QListWidget, QListWidgetItem, QDialog, QDialogButtonBox, QScrollArea
 from PyQt6.QtCore import Qt
 
 tests = [
@@ -9,8 +9,9 @@ tests = [
     ("chameau", "désert", "forêt"),
     ("piano", "partition", "roman"),
     ("sifflet", "maçon", "gendarme"),
-    ("château", "chevalier", "pirate"),
-    ("chauve-souris", "nuit", "jour"),
+    ("château", "chevalier", "pirate")
+]
+'''("chauve-souris", "nuit", "jour"),
     ("serpent", "banquise", "désert"),
     ("flèche", "arc", "fusil"), 
     ("moulin à vent", "campagne", "ville"),
@@ -77,15 +78,16 @@ tests = [
     ("marteau", "vis", "clou"),
     ("rhinocéros", "lion", "chat"),
     ("moto", "costume", "blouson"),
-    ("écureuil", "maïs", "gland")
-]
+    ("écureuil", "maïs", "gland")'''
+
 
 class SemanticMatching(QWidget):
-    def __init__(self):
+    def __init__(self, tests):
         super().__init__()
         self.setWindowTitle("Test Appariement Sémantique")
         self.setGeometry(100, 100, 400, 300)
 
+        self.tests = tests
         self.current_index = 0
         self.responses = []
 
@@ -110,7 +112,7 @@ class SemanticMatching(QWidget):
 
     def load_next_test(self):
         if self.current_index < len(tests):
-            test_word, choice1, choice2 = tests[self.current_index]
+            test_word, choice1, choice2 = self.tests[self.current_index]
             self.label_test_word.setText(f"Mot test : {test_word}")
             self.button_choice_1.setText(choice1)
             self.button_choice_2.setText(choice2)
@@ -118,7 +120,7 @@ class SemanticMatching(QWidget):
             self.end_test()
 
     def reccord_response(self,choice_index):
-        test = tests[self.current_index]
+        test = self.tests[self.current_index]
         selected_word = test[1 + choice_index]
         self.responses.append({
             "test_word": test[0],
@@ -131,15 +133,90 @@ class SemanticMatching(QWidget):
         self.load_next_test()
 
     def end_test(self):
-        QMessageBox.information(self, "Fin du test", "Merci d'avoir effectué le test")
-        print("Réponses :")
+        recap = "Test terminé !\n\n Les Réponses :\n\n"
         for r in self.responses:
-            print(r)
+            recap += f"- Mot : {r['test_word']}\n -> {r['choice1']} | {r['choice2']} -> Réponse : {r['selected']}\n\n"
+        # Crée un QDialog personnalisé avec scroll
+        recap_dialog = QDialog(self)
+        recap_dialog.setWindowTitle("Résultats du test")
+        layout = QVBoxLayout()
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+
+        content = QWidget()
+        content_layout = QVBoxLayout()
+        label = QLabel(recap)
+        label.setWordWrap(True)
+        content_layout.addWidget(label)
+        content.setLayout(content_layout)
+
+        scroll.setWidget(content)
+        layout.addWidget(scroll)
+
+        # Boutons Oui / Non
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Yes | QDialogButtonBox.StandardButton.No)
+        buttons.button(QDialogButtonBox.StandardButton.Yes).setText("Repasser certains items")
+        buttons.button(QDialogButtonBox.StandardButton.No).setText("Quitter")
+
+        buttons.accepted.connect(recap_dialog.accept)
+        buttons.rejected.connect(recap_dialog.reject)
+
+        layout.addWidget(buttons)
+        recap_dialog.setLayout(layout)
+        recap_dialog.resize(500, 400)
+
+        if recap_dialog.exec():
+            self.select_item_to_retry()
+        else:
+            self.close()
+
+    def select_item_to_retry(self):
+        dialog =QDialog(self)
+        dialog.setWindowTitle("Repasser certain Item")
+        layout = QVBoxLayout()
+
+        list_widget = QListWidget()
+        list_widget.setMinimumHeight(10)
+        list_widget.setMaximumHeight(100)
+        list_widget.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
+        self.items_map = {}
+        for i, r in enumerate(self.responses):
+            item_text = f"{r['test_word']} -> {r['selected']}"
+            item = QListWidgetItem(item_text)
+            item.setCheckState(Qt.CheckState.Unchecked)
+            list_widget.addItem(item)
+            self.items_map[i] = r
+
+        layout.addWidget(QLabel("Sélectionnez les items que vous souhaitez faire repasser :"))
+        layout.addWidget(list_widget)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+
+        dialog.setLayout(layout)
+        if dialog.exec():
+            item_to_retry = []
+            for i in range(list_widget.count()):
+                item = list_widget.item(i)
+                if item.checkState() == Qt.CheckState.Checked:
+                    index = i
+                    original = self.tests[index]
+                    item_to_retry.append(original)
+            if item_to_retry:
+                self.retry_item(item_to_retry)
+
+    def retry_item(self, items):
+        self.new_window = SemanticMatching(items)
+        self.new_window.show()
         self.close()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = SemanticMatching()
+    window = SemanticMatching(tests)
     window.show()
     sys.exit(app.exec())
 
