@@ -3,6 +3,7 @@ from PyQt6.QtGui import QPixmap
 import sqlite3
 import os
 import glob
+from PyQt6.QtCore import Qt
 
 
 # --- Configuration ---
@@ -80,27 +81,38 @@ class SelectionCelebrites(QDialog):
         self.setWindowTitle("Sélection des célébrités")
         self.setGeometry(200, 200, 500, 600)
         self.patient_id = patient_id
-        
+
         self.layout = QVBoxLayout()
-        self.nom_label = QLabel("")
+
+        # Image centrée
         self.image_label = QLabel()
+        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.layout.addWidget(self.image_label, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        # Nom centré
+        self.nom_label = QLabel("")
+        self.nom_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.layout.addWidget(self.nom_label, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        # Boutons centrés dans une ligne
+        btn_layout = QHBoxLayout()
         self.btn_connu = QPushButton("Connu")
         self.btn_inconnu = QPushButton("Inconnu")
-        
+        btn_layout.addWidget(self.btn_connu)
+        btn_layout.addWidget(self.btn_inconnu)
+        self.layout.addLayout(btn_layout)
+
         self.btn_connu.clicked.connect(self.enregistrer_connu)
         self.btn_inconnu.clicked.connect(self.passer)
-        
-        self.layout.addWidget(self.image_label)
-        self.layout.addWidget(self.nom_label)
-        self.layout.addWidget(self.btn_connu)
-        self.layout.addWidget(self.btn_inconnu)
-        
+
         self.setLayout(self.layout)
-        
-        self.celebrites = [{"nom": os.path.splitext(os.path.basename(f))[0].replace("_", " "), "image": f} 
-                   for f in glob.glob(os.path.join(DOSSIER_IMAGES, "*.webp"))]
+
+        # Chargement des célébrités
+        self.celebrites = [{"nom": os.path.splitext(os.path.basename(f))[0].replace("_", " "), "image": f}
+                           for f in glob.glob(os.path.join(DOSSIER_IMAGES, "*.webp"))]
 
         self.afficher_celebrite()
+
 
     
     def afficher_celebrite(self):
