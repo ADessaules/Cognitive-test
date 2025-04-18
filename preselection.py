@@ -50,12 +50,21 @@ class MainApp(QWidget):
         self.btn_supprimer_patient = QPushButton("Supprimer Patient")
         self.btn_supprimer_patient.setFixedHeight(60)
         self.btn_supprimer_patient.setStyleSheet("font-size: 18px;")
+
+
+        self.btn_selection_celeb = QPushButton("Sélectionner Célébrités pour un Patient")
+        self.btn_selection_celeb.setFixedHeight(60)
+        self.btn_selection_celeb.setStyleSheet("font-size: 18px;")
+        self.btn_selection_celeb.clicked.connect(self.selectionner_patient_pour_celebrite)
+
+
  
         self.btn_creer_patient.clicked.connect(self.creer_patient)
         self.btn_liste_patients.clicked.connect(self.afficher_liste_patients)
         self.btn_supprimer_patient.clicked.connect(self.afficher_liste_patients_supprimer)
         
         self.layout.addWidget(self.btn_creer_patient)
+        self.layout.addWidget(self.btn_selection_celeb)
         self.layout.addWidget(self.btn_liste_patients)
         self.layout.addWidget(self.btn_supprimer_patient)
         
@@ -70,9 +79,8 @@ class MainApp(QWidget):
             conn.commit()
             patient_id = cursor.lastrowid
             conn.close()
-            
-            self.selection_fenetre = SelectionCelebrites(patient_id)
-            self.selection_fenetre.show()
+            QMessageBox.information(self, "Patient créé", f"Le patient « {nom} » a bien été créé.")
+
 
     def afficher_liste_patients(self):
         self.liste_patients_fenetre = ListePatients()
@@ -81,6 +89,57 @@ class MainApp(QWidget):
     def afficher_liste_patients_supprimer(self):
         self.supprimer_patients_fenetre = ListePatients(supprimer=True)
         self.supprimer_patients_fenetre.show()
+
+    def selectionner_patient_pour_celebrite(self):
+        self.selection_patient_fenetre = SelectionPatientDialog(self.lancer_selection_celebrite)
+        self.selection_patient_fenetre.show()
+
+    def lancer_selection_celebrite(self, patient_id):
+        # Vérifier si ce patient a déjà fait une sélection
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM selections WHERE patient_id = ?", (patient_id,))
+        count = cursor.fetchone()[0]
+        conn.close()
+
+        if count > 0:
+            QMessageBox.information(self, "Déjà sélectionné", "Ce patient a déjà effectué la préselection.")
+        else:
+            self.selection_fenetre = SelectionCelebrites(patient_id)
+            self.selection_fenetre.show()
+
+
+
+
+class SelectionPatientDialog(QDialog):
+    def __init__(self, callback):
+        super().__init__()
+        self.setWindowTitle("Choisir un patient")
+        self.setGeometry(200, 200, 400, 400)
+        self.callback = callback
+        
+        self.layout = QVBoxLayout()
+        self.liste_widget = QListWidget()
+        
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, nom FROM patients")
+        self.patients = cursor.fetchall()
+        conn.close()
+        
+        for patient in self.patients:
+            self.liste_widget.addItem(f"{patient[1]}")
+        
+        self.liste_widget.itemClicked.connect(self.patient_selectionne)
+        self.layout.addWidget(self.liste_widget)
+        self.setLayout(self.layout)
+
+    def patient_selectionne(self, item):
+        index = self.liste_widget.row(item)
+        patient_id = self.patients[index][0]
+        self.callback(patient_id)
+        self.close()
+
 
 # --- Fenêtre de sélection des célébrités ---
 class SelectionCelebrites(QDialog):
