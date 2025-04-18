@@ -111,7 +111,7 @@ class SemanticMatching(QWidget):
         self.load_next_test()
 
     def load_next_test(self):
-        if self.current_index < len(tests):
+        if self.current_index < len(self.tests):  # ⚠️ ici on utilise bien self.tests
             test_word, choice1, choice2 = self.tests[self.current_index]
             self.label_test_word.setText(f"Mot test : {test_word}")
             self.button_choice_1.setText(choice1)
@@ -119,18 +119,19 @@ class SemanticMatching(QWidget):
         else:
             self.end_test()
 
-    def reccord_response(self,choice_index):
-        test = self.tests[self.current_index]
-        selected_word = test[1 + choice_index]
-        self.responses.append({
-            "test_word": test[0],
-            "choice1": test[1],
-            "choice2": test[2],
-            "selected": selected_word
-        })
 
-        self.current_index += 1
-        self.load_next_test()
+    def reccord_response(self,choice_index):
+        if self.current_index < len(self.tests):
+            test = self.tests[self.current_index]
+            selected_word = test[1 + choice_index]
+            self.responses.append({
+                "test_word": test[0],
+                "choice1": test[1],
+                "choice2": test[2],
+                "selected": selected_word
+            })
+            self.current_index += 1
+            self.load_next_test()
 
     def end_test(self):
         recap = "Test terminé !\n\n Les Réponses :\n\n"
@@ -172,13 +173,12 @@ class SemanticMatching(QWidget):
             self.close()
 
     def select_item_to_retry(self):
-        dialog =QDialog(self)
-        dialog.setWindowTitle("Repasser certain Item")
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Repasser certains items")
         layout = QVBoxLayout()
 
         list_widget = QListWidget()
-        list_widget.setMinimumHeight(10)
-        list_widget.setMaximumHeight(100)
+        list_widget.setMinimumHeight(200)
         list_widget.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
         self.items_map = {}
@@ -187,7 +187,7 @@ class SemanticMatching(QWidget):
             item = QListWidgetItem(item_text)
             item.setCheckState(Qt.CheckState.Unchecked)
             list_widget.addItem(item)
-            self.items_map[i] = r
+            self.items_map[i] = r  # mappe l'index de l'affichage à la réponse
 
         layout.addWidget(QLabel("Sélectionnez les items que vous souhaitez faire repasser :"))
         layout.addWidget(list_widget)
@@ -198,16 +198,18 @@ class SemanticMatching(QWidget):
         layout.addWidget(buttons)
 
         dialog.setLayout(layout)
+
         if dialog.exec():
-            item_to_retry = []
+            items_to_retry = []
             for i in range(list_widget.count()):
                 item = list_widget.item(i)
                 if item.checkState() == Qt.CheckState.Checked:
-                    index = i
-                    original = self.tests[index]
-                    item_to_retry.append(original)
-            if item_to_retry:
-                self.retry_item(item_to_retry)
+                    response = self.items_map[i]
+                    # 🔥 CONSTRUIT le test à refaire depuis la réponse
+                    test = (response['test_word'], response['choice1'], response['choice2'])
+                    items_to_retry.append(test)
+            if items_to_retry:
+                self.retry_item(items_to_retry)
 
     def retry_item(self, items):
         self.new_window = SemanticMatching(items)
