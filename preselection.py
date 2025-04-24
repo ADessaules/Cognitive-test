@@ -1,9 +1,11 @@
 from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QLabel, QVBoxLayout, QHBoxLayout, QDialog, QInputDialog, QMessageBox, QListWidget, QGridLayout
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QPixmap, QPainter, QPen
 import sqlite3
 import os
 import glob
 from PyQt6.QtCore import Qt
+import math
+import random
 
 
 # --- Configuration ---
@@ -25,6 +27,15 @@ def creer_base():
             patient_id INTEGER,
             nom TEXT,
             image TEXT,
+            FOREIGN KEY(patient_id) REFERENCES patients(id)
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS bisection (
+            patient_id INTEGER,
+            x1 REAL, y1 REAL,
+            x2 REAL, y2 REAL,
+            clic_x REAL, clic_y REAL,
             FOREIGN KEY(patient_id) REFERENCES patients(id)
         )
     """)
@@ -55,18 +66,25 @@ class MainApp(QWidget):
         self.btn_selection_celeb = QPushButton("Sélectionner Célébrités pour un Patient")
         self.btn_selection_celeb.setFixedHeight(60)
         self.btn_selection_celeb.setStyleSheet("font-size: 18px;")
-        self.btn_selection_celeb.clicked.connect(self.selectionner_patient_pour_celebrite)
+        
+        self.btn_bisection = QPushButton("Bisection")
+        self.btn_bisection.setFixedHeight(60)
+        self.btn_bisection.setStyleSheet("font-size: 18px;")        
 
 
- 
+        self.btn_selection_celeb.clicked.connect(self.selectionner_patient_pour_celebrite) 
         self.btn_creer_patient.clicked.connect(self.creer_patient)
         self.btn_liste_patients.clicked.connect(self.afficher_liste_patients)
         self.btn_supprimer_patient.clicked.connect(self.afficher_liste_patients_supprimer)
-        
+        self.btn_bisection.clicked.connect(self.selectionner_patient_pour_bisection)        
+
+
         self.layout.addWidget(self.btn_creer_patient)
         self.layout.addWidget(self.btn_selection_celeb)
         self.layout.addWidget(self.btn_liste_patients)
         self.layout.addWidget(self.btn_supprimer_patient)
+        self.layout.addWidget(self.btn_bisection)
+
         
         self.setLayout(self.layout)
     
@@ -94,6 +112,10 @@ class MainApp(QWidget):
         self.selection_patient_fenetre = SelectionPatientDialog(self.lancer_selection_celebrite)
         self.selection_patient_fenetre.show()
 
+    def selectionner_patient_pour_bisection(self):
+        self.selection_patient_fenetre = SelectionPatientDialog(self.lancer_bisection)
+        self.selection_patient_fenetre.show()
+
     def lancer_selection_celebrite(self, patient_id):
         # Vérifier si ce patient a déjà fait une sélection
         conn = sqlite3.connect(DB_FILE)
@@ -108,8 +130,60 @@ class MainApp(QWidget):
             self.selection_fenetre = SelectionCelebrites(patient_id)
             self.selection_fenetre.show()
 
+    def lancer_bisection(self, patient_id):
+        self.bisection_fenetre = BisectionTest(patient_id)
+        self.bisection_fenetre.show()
 
 
+# --- Fenêtre de test Bisection ---
+class BisectionTest(QWidget):
+    def __init__(self, patient_id):
+        super().__init__()
+        self.setWindowTitle("Test de Bisection")
+        self.setGeometry(300, 300, 600, 600)
+        self.patient_id = patient_id
+        self.attempt = 0
+        self.total_attempts = 10
+        self.setMouseTracking(True)
+        self.generate_new_bar()
+
+    def generate_new_bar(self):
+        cx, cy = self.width() // 2, self.height() // 2
+        length = 200
+        angle = random.uniform(0, math.pi)
+        dx = length / 2 * math.cos(angle)
+        dy = length / 2 * math.sin(angle)
+        self.x1, self.y1 = cx - dx + random.randint(-100, 100), cy - dy + random.randint(-100, 100)
+        self.x2, self.y2 = cx + dx + random.randint(-100, 100), cy + dy + random.randint(-100, 100)
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        pen = QPen(Qt.GlobalColor.black, 5)
+        painter.setPen(pen)
+        painter.drawLine(int(self.x1), int(self.y1), int(self.x2), int(self.y2))
+
+    def mousePressEvent(self, event):
+        if self.attempt >= self.total_attempts:
+            return
+
+        clic_x, clic_y = event.position().x(), event.position().y()
+
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO bisection (patient_id, x1, y1, x2, y2, clic_x, clic_y)
+            VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (self.patient_id, self.x1, self.y1, self.x2, self.y2, clic_x, clic_y))
+        conn.commit()
+        conn.close()
+
+        self.attempt += 1
+        if self.attempt < self.total_attempts:
+            self.generate_new_bar()
+        else:
+            QMessageBox.information(self, "Terminé", "Test de bisection terminé.")
+            self.close()
 
 class SelectionPatientDialog(QDialog):
     def __init__(self, callback):
@@ -254,30 +328,112 @@ class DetailsPatient(QDialog):
         super().__init__()
         self.setWindowTitle("Détails du Patient")
         self.setGeometry(250, 250, 500, 500)
-        self.layout = QGridLayout()
+        self.patient_id = patient_id
         
+        self.layout = QVBoxLayout()
+        self.btn_layout = QHBoxLayout()
+
+        self.btn_selections = QPushButton("Sélections")
+        self.btn_bisection = QPushButton("Bisection")
+
+        self.btn_selections.clicked.connect(self.afficher_selections)
+        self.btn_bisection.clicked.connect(self.afficher_bisection)
+
+        self.btn_layout.addWidget(self.btn_selections)
+        self.btn_layout.addWidget(self.btn_bisection)
+
+        self.layout.addLayout(self.btn_layout)
+        self.contenu = QVBoxLayout()
+        self.layout.addLayout(self.contenu)
+
+        self.setLayout(self.layout)
+        self.afficher_selections()  # Affiche par défaut les sélections
+
+    def clear_contenu(self):
+        while self.contenu.count():
+            item = self.contenu.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+
+    def afficher_selections(self):
+        self.clear_contenu()
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
-        cursor.execute("SELECT nom, image FROM selections WHERE patient_id = ?", (patient_id,))
+        cursor.execute("SELECT nom, image FROM selections WHERE patient_id = ?", (self.patient_id,))
         celebrites = cursor.fetchall()
         conn.close()
-        
+
+        grid = QGridLayout()
         row, col = 0, 0
-        for celeb in celebrites:
-            nom, image_path = celeb
+        for nom, image_path in celebrites:
             label = QLabel(nom)
             img_label = QLabel()
             if os.path.exists(image_path):
                 pixmap = QPixmap(image_path).scaled(150, 150)
                 img_label.setPixmap(pixmap)
-            self.layout.addWidget(img_label, row, col)
-            self.layout.addWidget(label, row+1, col)
+            grid.addWidget(img_label, row, col)
+            grid.addWidget(label, row + 1, col)
             col += 1
             if col >= 3:
                 col = 0
                 row += 2
-        
-        self.setLayout(self.layout)
+        self.contenu.addLayout(grid)
+
+    def afficher_bisection(self):
+        self.clear_contenu()
+    
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT x1, y1, x2, y2, clic_x, clic_y
+            FROM bisection
+            WHERE patient_id = ?
+        """, (self.patient_id,))
+        essais = cursor.fetchall()
+        conn.close()
+
+        if not essais:
+            self.contenu.addWidget(QLabel("Aucun test de bisection trouvé."))
+            return
+
+        total_distance = 0
+        total_precision = 0
+        essais_valides = 0
+        max_distance = 100.0  # distance maximale pour calculer un pourcentage de précision
+
+        resultats_layout = QVBoxLayout()
+
+        for i, (x1, y1, x2, y2, clic_x, clic_y) in enumerate(essais, 1):
+            if None in (x1, y1, x2, y2, clic_x, clic_y):
+                print(f"⚠️ Donnée manquante à l'essai {i}, ignoré.")
+                continue
+
+            mx = (x1 + x2) / 2
+            my = (y1 + y2) / 2
+            distance = math.sqrt((clic_x - mx) ** 2 + (clic_y - my) ** 2)
+            precision = max(0, 100 - (distance / max_distance) * 100)
+
+            total_distance += distance
+            total_precision += precision
+            essais_valides += 1
+
+            label = QLabel(f"Essai {i} : Distance = {distance:.2f} px | Précision = {precision:.1f} %")
+            resultats_layout.addWidget(label)
+
+        if essais_valides == 0:
+            self.contenu.addWidget(QLabel("Aucune donnée exploitable pour les essais de bisection."))
+            return
+
+        moyenne_distance = total_distance / essais_valides
+        moyenne_precision = total_precision / essais_valides
+
+        resultats_layout.addSpacing(10)
+        resultats_layout.addWidget(QLabel(f"📏 Distance moyenne : {moyenne_distance:.2f} px"))
+        resultats_layout.addWidget(QLabel(f"🎯 Précision moyenne : {moyenne_precision:.1f} %"))
+
+        self.contenu.addLayout(resultats_layout)
+
 
 # --- Exécution de l'application ---
 if __name__ == "__main__":
