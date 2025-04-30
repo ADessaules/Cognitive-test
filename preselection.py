@@ -350,11 +350,15 @@ class DetailsPatient(QDialog):
         self.afficher_selections()  # Affiche par défaut les sélections
 
     def clear_contenu(self):
-        while self.contenu.count():
-            item = self.contenu.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.deleteLater()
+        def clear_layout(layout):
+            while layout.count():
+                item = layout.takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
+                elif item.layout():
+                    clear_layout(item.layout())
+
+        clear_layout(self.contenu)
 
     def afficher_selections(self):
         self.clear_contenu()
