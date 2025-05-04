@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QPushButton,
-    QVBoxLayout, QHBoxLayout, QFileDialog, QLineEdit, QMessageBox
+    QVBoxLayout, QHBoxLayout, QLineEdit, QMessageBox, QComboBox
 )
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import QTimer
@@ -19,12 +19,10 @@ class FamousFaceTest(QMainWindow):
         self.setWindowTitle("Famous Face Test")
         self.setGeometry(100, 100, 800, 600)
 
-        # === CONFIGURATION ===
         self.image_folder = "images_extraites_famous_faceV1"
         self.test_name = "famous_face"
         self.results_file = "resultats_test.xlsx"
 
-        # === VARIABLES ===
         self.all_images = sorted([
             img for img in os.listdir(self.image_folder) if img.endswith(".png")
         ], key=lambda x: int(x.split("_")[1].split(".")[0]))
@@ -55,16 +53,21 @@ class FamousFaceTest(QMainWindow):
 
         self.layout = QVBoxLayout()
 
-        # Nom/prenom
         self.prenom_input = QLineEdit()
         self.prenom_input.setPlaceholderText("Prénom")
         self.nom_input = QLineEdit()
         self.nom_input.setPlaceholderText("Nom")
+        self.mode_selector = QComboBox()
+        self.mode_selector.addItems(["Image au clic", "Temps imparti"])
+        self.timer_input = QLineEdit()
+        self.timer_input.setPlaceholderText("Temps (s)")
         self.validate_btn = QPushButton("Valider")
         self.validate_btn.clicked.connect(self.start_configuration)
 
         self.layout.addWidget(self.prenom_input)
         self.layout.addWidget(self.nom_input)
+        self.layout.addWidget(self.mode_selector)
+        self.layout.addWidget(self.timer_input)
         self.layout.addWidget(self.validate_btn)
 
         self.image_layout = QHBoxLayout()
@@ -72,6 +75,9 @@ class FamousFaceTest(QMainWindow):
 
         self.info_label = QLabel("")
         self.layout.addWidget(self.info_label)
+
+        self.feedback_label = QLabel("")
+        self.layout.addWidget(self.feedback_label)
 
         self.central_widget.setLayout(self.layout)
 
@@ -83,6 +89,12 @@ class FamousFaceTest(QMainWindow):
             return
 
         self.participant_name = f"{prenom} {nom}"
+        self.mode = "timer" if self.mode_selector.currentText() == "Temps imparti" else "click"
+        try:
+            self.timer_duration = int(self.timer_input.text()) if self.mode == "timer" else 0
+        except ValueError:
+            self.timer_duration = 3
+
         self.session_active = True
         self.current_index = 0
         self.click_times = []
@@ -94,6 +106,8 @@ class FamousFaceTest(QMainWindow):
             widget = self.image_layout.itemAt(i).widget()
             if widget:
                 widget.setParent(None)
+
+        self.feedback_label.clear()
 
         if self.current_index >= len(self.current_triplets):
             self.end_session()
@@ -134,11 +148,14 @@ class FamousFaceTest(QMainWindow):
         reaction_time = round(time.time() - self.start_time, 3)
         self.click_times.append(reaction_time)
 
-        if not is_famous:
+        if is_famous:
+            self.feedback_label.setText("<span style='color: green; font-size: 24px;'>✔️</span>")
+        else:
+            self.feedback_label.setText("<span style='color: red; font-size: 24px;'>❌</span>")
             self.error_indices.append(self.current_index)
 
         self.current_index += 1
-        self.show_triplet()
+        QTimer.singleShot(500, self.show_triplet)
 
     def handle_timeout(self):
         self.timer.stop()
