@@ -57,15 +57,22 @@ class FamousFaceTest(QMainWindow):
         self.prenom_input.setPlaceholderText("Prénom")
         self.nom_input = QLineEdit()
         self.nom_input.setPlaceholderText("Nom")
+
+        self.mode_label = QLabel("Mode d'affichage des images :")
         self.mode_selector = QComboBox()
         self.mode_selector.addItems(["Image au clic", "Temps imparti"])
+        self.mode_selector.currentTextChanged.connect(self.toggle_timer_input)
+
         self.timer_input = QLineEdit()
-        self.timer_input.setPlaceholderText("Temps (s)")
+        self.timer_input.setPlaceholderText("Temps (en secondes)")
+        self.timer_input.setVisible(False)
+
         self.validate_btn = QPushButton("Valider")
         self.validate_btn.clicked.connect(self.start_configuration)
 
         self.layout.addWidget(self.prenom_input)
         self.layout.addWidget(self.nom_input)
+        self.layout.addWidget(self.mode_label)
         self.layout.addWidget(self.mode_selector)
         self.layout.addWidget(self.timer_input)
         self.layout.addWidget(self.validate_btn)
@@ -80,6 +87,9 @@ class FamousFaceTest(QMainWindow):
         self.layout.addWidget(self.feedback_label)
 
         self.central_widget.setLayout(self.layout)
+
+    def toggle_timer_input(self):
+        self.timer_input.setVisible(self.mode_selector.currentText() == "Temps imparti")
 
     def start_configuration(self):
         prenom = self.prenom_input.text().strip()
