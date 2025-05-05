@@ -216,70 +216,94 @@ class SelectionPatientDialog(QDialog):
 
 
 # --- Fenêtre de sélection des célébrités ---
+from PyQt6.QtWidgets import QScrollArea
+
 class SelectionCelebrites(QDialog):
     def __init__(self, patient_id):
         super().__init__()
         self.setWindowTitle("Sélection des célébrités")
-        self.setGeometry(200, 200, 500, 600)
+        self.setGeometry(100, 100, 800, 600)
         self.patient_id = patient_id
-
-        self.layout = QVBoxLayout()
-
-        self.image_label = QLabel()
-        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.layout.addWidget(self.image_label, alignment=Qt.AlignmentFlag.AlignCenter)
-
-        self.nom_label = QLabel("")
-        self.nom_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.layout.addWidget(self.nom_label, alignment=Qt.AlignmentFlag.AlignCenter)
-
-        btn_layout = QHBoxLayout()
-        self.btn_connu = QPushButton("Connu")
-        self.btn_inconnu = QPushButton("Inconnu")
-        btn_layout.addWidget(self.btn_connu)
-        btn_layout.addWidget(self.btn_inconnu)
-        self.layout.addLayout(btn_layout)
-
-        self.btn_connu.clicked.connect(self.enregistrer_connu)
-        self.btn_inconnu.clicked.connect(self.passer)
-
-        self.setLayout(self.layout)
+        self.selections = {}
 
         # Chargement des célébrités
         self.celebrites = [{"nom": os.path.splitext(os.path.basename(f))[0].replace("_", " "), "image": f}
                            for f in glob.glob(os.path.join(DOSSIER_IMAGES, "*.webp"))]
 
-        self.afficher_celebrite()
+        self.layout = QVBoxLayout()
 
+        scroll = QScrollArea()
+        scroll_widget = QWidget()
+        self.grid_layout = QGridLayout()
+        scroll_widget.setLayout(self.grid_layout)
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(scroll_widget)
 
-    
-    def afficher_celebrite(self):
-        if not self.celebrites:
-            QMessageBox.information(self, "Terminé", "Sélection terminée.")
-            self.close()
-            return
-        
-        self.current_celebrite = self.celebrites.pop(0)
-        self.nom_label.setText(self.current_celebrite["nom"])
-        
-        image_path = self.current_celebrite["image"]
-        if os.path.exists(image_path):
-            pixmap = QPixmap(image_path).scaled(200, 200)
-            self.image_label.setPixmap(pixmap)
-        else:
-            self.passer()
+        self.layout.addWidget(scroll)
 
-    def enregistrer_connu(self):
+        self.btn_valider = QPushButton("Valider la sélection")
+        self.btn_valider.setStyleSheet("font-size: 18px; padding: 10px;")
+        self.btn_valider.clicked.connect(self.valider_selection)
+        self.layout.addWidget(self.btn_valider)
+
+        self.setLayout(self.layout)
+
+        self.afficher_celebrite_grid()
+
+    def afficher_celebrite_grid(self):
+        row = col = 0
+        for celebrité in self.celebrites:
+            nom = celebrité["nom"]
+            image_path = celebrité["image"]
+
+            img_label = QLabel()
+            img_label.setFixedSize(150, 150)
+            img_label.setScaledContents(True)
+
+            if os.path.exists(image_path):
+                pixmap = QPixmap(image_path).scaled(150, 150, Qt.AspectRatioMode.KeepAspectRatio)
+                img_label.setPixmap(pixmap)
+
+            img_label.mousePressEvent = self.generer_toggle_handler(img_label, nom, image_path)
+            self.grid_layout.addWidget(img_label, row, col)
+            self.selections[img_label] = {"selected": True, "nom": nom, "image": image_path, "pixmap": pixmap}
+
+            col += 1
+            if col >= 4:
+                col = 0
+                row += 1
+
+    def generer_toggle_handler(self, label, nom, image_path):
+        def handler(event):
+            current = self.selections[label]
+            current["selected"] = not current["selected"]
+            opacity = 0.3 if not current["selected"] else 1.0
+            pixmap = QPixmap(current["image"]).scaled(150, 150, Qt.AspectRatioMode.KeepAspectRatio)
+            transparent = QPixmap(pixmap.size())
+            transparent.fill(Qt.GlobalColor.transparent)
+
+            painter = QPainter(transparent)
+            painter.setOpacity(opacity)
+            painter.drawPixmap(0, 0, pixmap)
+            painter.end()
+
+            label.setPixmap(transparent)
+        return handler
+
+    def valider_selection(self):
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO selections (patient_id, nom, image) VALUES (?, ?, ?)", 
-                       (self.patient_id, self.current_celebrite["nom"], self.current_celebrite["image"]))
+        for info in self.selections.values():
+            if info["selected"]:
+                cursor.execute(
+                    "INSERT INTO selections (patient_id, nom, image) VALUES (?, ?, ?)",
+                    (self.patient_id, info["nom"], info["image"])
+                )
         conn.commit()
         conn.close()
-        self.afficher_celebrite()
-    
-    def passer(self):
-        self.afficher_celebrite()
+        QMessageBox.information(self, "Enregistré", "Sélection enregistrée.")
+        self.close()
+
 
 # --- Fenêtre de liste des patients ---
 class ListePatients(QDialog):
