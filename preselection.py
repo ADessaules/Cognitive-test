@@ -148,14 +148,22 @@ class BisectionTest(QWidget):
         self.generate_new_bar()
 
     def generate_new_bar(self):
-        cx, cy = self.width() // 2, self.height() // 2
-        length = 200
-        angle = random.uniform(0, math.pi)
-        dx = length / 2 * math.cos(angle)
-        dy = length / 2 * math.sin(angle)
-        self.x1, self.y1 = cx - dx + random.randint(-100, 100), cy - dy + random.randint(-100, 100)
-        self.x2, self.y2 = cx + dx + random.randint(-100, 100), cy + dy + random.randint(-100, 100)
+        dpi = self.logicalDpiX()
+        pixels_per_cm = dpi / 2.54
+        length = 20 * pixels_per_cm  # 20 cm
+
+        margin = length / 2 + 10
+        cx = random.uniform(margin, self.width() - margin)
+        cy = random.uniform(margin, self.height() - margin)
+
+        # Bar horizontale
+        self.x1, self.y1 = cx - length / 2, cy
+        self.x2, self.y2 = cx + length / 2, cy
+
+        self.bar_cx = cx  # stocke le centre pour le calcul
+        self.bar_cy = cy
         self.update()
+
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -409,8 +417,9 @@ class DetailsPatient(QDialog):
         self.contenu.addLayout(grid)
 
     def afficher_bisection(self):
+        # Fenêtre de test
         self.clear_contenu()
-    
+
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
         cursor.execute("""
@@ -418,49 +427,28 @@ class DetailsPatient(QDialog):
             FROM bisection
             WHERE patient_id = ?
         """, (self.patient_id,))
-        essais = cursor.fetchall()
+        resultats = cursor.fetchall()
         conn.close()
 
-        if not essais:
-            self.contenu.addWidget(QLabel("Aucun test de bisection trouvé."))
+        if not resultats:
+            self.contenu.addWidget(QLabel("Aucun test de bisection enregistré pour ce patient."))
             return
 
-        total_distance = 0
-        total_precision = 0
-        essais_valides = 0
-        max_distance = 100.0  # distance maximale pour calculer un pourcentage de précision
+        # Affichage des résultats
+        resultats_text = ""
+        dpi = self.logicalDpiX()
+        pixels_per_cm = dpi / 2.54
 
-        resultats_layout = QVBoxLayout()
-
-        for i, (x1, y1, x2, y2, clic_x, clic_y) in enumerate(essais, 1):
-            if None in (x1, y1, x2, y2, clic_x, clic_y):
-                print(f"⚠️ Donnée manquante à l'essai {i}, ignoré.")
-                continue
-
+        for i, (x1, y1, x2, y2, clic_x, clic_y) in enumerate(resultats, 1):
             mx = (x1 + x2) / 2
-            my = (y1 + y2) / 2
-            distance = math.sqrt((clic_x - mx) ** 2 + (clic_y - my) ** 2)
-            precision = max(0, 100 - (distance / max_distance) * 100)
+            delta_cm = (clic_x - mx) / pixels_per_cm
+            resultats_text += f"Essai {i} : Erreur = {delta_cm:+.2f} cm\n"
 
-            total_distance += distance
-            total_precision += precision
-            essais_valides += 1
+        label = QLabel(resultats_text)
+        label.setStyleSheet("font-size: 16px;")
+        self.contenu.addWidget(label)
 
-            label = QLabel(f"Essai {i} : Distance = {distance:.2f} px | Précision = {precision:.1f} %")
-            resultats_layout.addWidget(label)
 
-        if essais_valides == 0:
-            self.contenu.addWidget(QLabel("Aucune donnée exploitable pour les essais de bisection."))
-            return
-
-        moyenne_distance = total_distance / essais_valides
-        moyenne_precision = total_precision / essais_valides
-
-        resultats_layout.addSpacing(10)
-        resultats_layout.addWidget(QLabel(f"📏 Distance moyenne : {moyenne_distance:.2f} px"))
-        resultats_layout.addWidget(QLabel(f"🎯 Précision moyenne : {moyenne_precision:.1f} %"))
-
-        self.contenu.addLayout(resultats_layout)
 
 
 # --- Exécution de l'application ---
