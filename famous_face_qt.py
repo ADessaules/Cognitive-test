@@ -24,7 +24,7 @@ class FamousFaceTest(QMainWindow):
         self.results_file = "resultats_test.xlsx"
 
         # Construction des triplets par groupe de X (0, 1, 2)
-        all_images = [img for img in os.listdir(self.image_folder) if img.endswith(".png")]
+        all_images = [img for img in os.listdir(self.image_folder) if img.lower().endswith(('.png', '.jpg', '.jpeg'))]
         triplet_dict = {}
         for img in all_images:
             try:
