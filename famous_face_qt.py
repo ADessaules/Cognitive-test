@@ -41,6 +41,8 @@ class FamousFaceTest(QMainWindow):
             if len(images) == 3
         ]
 
+        random.shuffle(self.all_triplets)  # Mélanger l'ordre des triplets
+
         self.current_triplets = self.all_triplets[:]
         self.current_index = 0
         self.click_times = []
@@ -119,6 +121,11 @@ class FamousFaceTest(QMainWindow):
         self.current_index = 0
         self.click_times = []
         self.error_indices = []
+
+        # Mélanger à nouveau les triplets pour cette session
+        self.current_triplets = self.all_triplets[:]
+        random.shuffle(self.current_triplets)
+
         self.show_triplet()
 
     def show_triplet(self):
