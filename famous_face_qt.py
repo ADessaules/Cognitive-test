@@ -19,7 +19,7 @@ class FamousFaceTest(QMainWindow):
         self.setWindowTitle("Famous Face Test")
         self.setGeometry(100, 100, 800, 600)
 
-        self.image_folder = "images_extraites_famous_faceV1"
+        self.image_folder = "image_famous_faceV1"
         self.test_name = "famous_face"
         self.results_file = "resultats_test.xlsx"
 
