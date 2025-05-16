@@ -23,12 +23,22 @@ class FamousFaceTest(QMainWindow):
         self.test_name = "famous_face"
         self.results_file = "resultats_test.xlsx"
 
-        self.all_images = [
-            img for img in os.listdir(self.image_folder) if img.endswith(".png")
-        ]
+        # Construction des triplets par groupe de X (0, 1, 2)
+        all_images = [img for img in os.listdir(self.image_folder) if img.endswith(".png")]
+        triplet_dict = {}
+        for img in all_images:
+            try:
+                prefix = img.split("_")[1]  # ex: "4" dans "image_4_0"
+                if prefix not in triplet_dict:
+                    triplet_dict[prefix] = []
+                triplet_dict[prefix].append(img)
+            except IndexError:
+                continue
 
         self.all_triplets = [
-            self.all_images[i:i + 3] for i in range(0, len(self.all_images), 3) if i + 2 < len(self.all_images)
+            sorted(images, key=lambda name: int(name.split("_")[2].split(".")[0]))
+            for _, images in sorted(triplet_dict.items(), key=lambda item: int(item[0]))
+            if len(images) == 3
         ]
 
         self.current_triplets = self.all_triplets[:]
@@ -124,7 +134,7 @@ class FamousFaceTest(QMainWindow):
             return
 
         images = self.current_triplets[self.current_index]
-        famous_img = images[0]
+        famous_img = next(img for img in images if img.endswith("_0.png"))
         shuffled = images[:]
         random.shuffle(shuffled)
         flags = [img == famous_img for img in shuffled]
