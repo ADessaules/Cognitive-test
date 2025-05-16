@@ -10,20 +10,40 @@ from PyQt6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QLineEdit, QMessageBox, QComboBox
 )
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import QTimer, Qt
 import pandas as pd
+
+class PatientWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Test en cours - Écran patient")
+        self.setGeometry(920, 100, 800, 600)
+        self.image_layout = QHBoxLayout()
+        self.setLayout(self.image_layout)
+
+    def show_images(self, triplet, click_handlers):
+        for i in reversed(range(self.image_layout.count())):
+            widget = self.image_layout.itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
+
+        for img_path, handler in zip(triplet, click_handlers):
+            pixmap = QPixmap(img_path).scaled(200, 200, Qt.AspectRatioMode.KeepAspectRatio)
+            label = QLabel()
+            label.setPixmap(pixmap)
+            label.mousePressEvent = handler
+            self.image_layout.addWidget(label)
 
 class FamousFaceTest(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Famous Face Test")
+        self.setWindowTitle("Famous Face Test - Expérimentateur")
         self.setGeometry(100, 100, 800, 600)
 
         self.image_folder = "image_famous_faceV1"
         self.test_name = "famous_face"
         self.results_file = "resultats_test.xlsx"
 
-        # Construction des triplets par groupe de X (0, 1, 2)
         all_images = [img for img in os.listdir(self.image_folder) if img.lower().endswith((".png", ".jpg", ".jpeg"))]
         triplet_dict = {}
         for img in all_images:
@@ -41,9 +61,9 @@ class FamousFaceTest(QMainWindow):
             if len(images) == 3
         ]
 
-        random.shuffle(self.all_triplets)  # Mélanger l'ordre des triplets
-
+        random.shuffle(self.all_triplets)
         self.current_triplets = self.all_triplets[:]
+
         self.current_index = 0
         self.click_times = []
         self.error_indices = []
@@ -57,12 +77,13 @@ class FamousFaceTest(QMainWindow):
         self.timer = QTimer()
         self.timer.timeout.connect(self.handle_timeout)
 
+        self.patient_window = PatientWindow()
+
         self.init_ui()
 
     def init_ui(self):
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
-
         self.layout = QVBoxLayout()
 
         self.prenom_input = QLineEdit()
@@ -89,15 +110,6 @@ class FamousFaceTest(QMainWindow):
         self.layout.addWidget(self.timer_input)
         self.layout.addWidget(self.validate_btn)
 
-        self.image_layout = QHBoxLayout()
-        self.layout.addLayout(self.image_layout)
-
-        self.info_label = QLabel("")
-        self.layout.addWidget(self.info_label)
-
-        self.feedback_label = QLabel("")
-        self.layout.addWidget(self.feedback_label)
-
         self.central_widget.setLayout(self.layout)
 
     def toggle_timer_input(self):
@@ -122,20 +134,13 @@ class FamousFaceTest(QMainWindow):
         self.click_times = []
         self.error_indices = []
 
-        # Mélanger à nouveau les triplets pour cette session
         self.current_triplets = self.all_triplets[:]
         random.shuffle(self.current_triplets)
 
+        self.patient_window.show()
         self.show_triplet()
 
     def show_triplet(self):
-        for i in reversed(range(self.image_layout.count())):
-            widget = self.image_layout.itemAt(i).widget()
-            if widget:
-                widget.setParent(None)
-
-        self.feedback_label.clear()
-
         if self.current_index >= len(self.current_triplets):
             self.end_session()
             return
@@ -151,27 +156,17 @@ class FamousFaceTest(QMainWindow):
         flags = [img == famous_img for img in shuffled]
 
         self.start_time = time.time()
-        for img_name, is_famous in zip(shuffled, flags):
-            img_path = os.path.join(self.image_folder, img_name)
-            pixmap = QPixmap(img_path).scaled(200, 200)
-            label = QLabel()
-            label.setPixmap(pixmap)
 
-            btn = QPushButton("Choisir")
-            btn.clicked.connect(self.make_click_handler(is_famous))
+        img_paths = [os.path.join(self.image_folder, img_name) for img_name in shuffled]
+        handlers = [self.make_click_handler(is_famous) for is_famous in flags]
 
-            box = QVBoxLayout()
-            box_widget = QWidget()
-            box.addWidget(label)
-            box.addWidget(btn)
-            box_widget.setLayout(box)
-            self.image_layout.addWidget(box_widget)
+        self.patient_window.show_images(img_paths, handlers)
 
         if self.mode == "timer":
             self.timer.start(self.timer_duration * 1000)
 
     def make_click_handler(self, is_famous):
-        def handler():
+        def handler(event):
             self.handle_click(is_famous)
         return handler
 
@@ -184,10 +179,7 @@ class FamousFaceTest(QMainWindow):
         reaction_time = round(time.time() - self.start_time, 3)
         self.click_times.append(reaction_time)
 
-        if is_famous:
-            self.feedback_label.setText("<span style='color: green; font-size: 24px;'>✔️</span>")
-        else:
-            self.feedback_label.setText("<span style='color: red; font-size: 24px;'>❌</span>")
+        if not is_famous:
             self.error_indices.append(self.current_index)
 
         self.current_index += 1
@@ -238,3 +230,4 @@ if __name__ == "__main__":
     window = FamousFaceTest()
     window.show()
     sys.exit(app.exec())
+
