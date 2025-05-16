@@ -23,14 +23,14 @@ class FamousFaceTest(QMainWindow):
         self.test_name = "famous_face"
         self.results_file = "resultats_test.xlsx"
 
-        """
+        
         self.all_images = sorted([
             img for img in os.listdir(self.image_folder) if img.endswith(".png")
         ], key=lambda x: int(x.split("_")[1].split(".")[0]))
-        """
+        
         
         self.all_triplets = [
-            self.image_folder[i:i + 3] for i in range(0, len(self.image_folder), 3) if i + 2 < len(self.image_folder)
+            self.all_images[i:i + 3] for i in range(0, len(self.all_images), 3) if i + 2 < len(self.all_images)
         ]
 
         self.current_triplets = self.all_triplets[:]
