@@ -23,12 +23,14 @@ class FamousFaceTest(QMainWindow):
         self.test_name = "famous_face"
         self.results_file = "resultats_test.xlsx"
 
+        """
         self.all_images = sorted([
             img for img in os.listdir(self.image_folder) if img.endswith(".png")
         ], key=lambda x: int(x.split("_")[1].split(".")[0]))
-
+        """
+        
         self.all_triplets = [
-            self.all_images[i:i + 3] for i in range(0, len(self.all_images), 3) if i + 2 < len(self.all_images)
+            self.image_folder[i:i + 3] for i in range(0, len(self.image_folder), 3) if i + 2 < len(self.image_folder)
         ]
 
         self.current_triplets = self.all_triplets[:]
@@ -131,28 +133,23 @@ class FamousFaceTest(QMainWindow):
 
         self.start_time = time.time()
         for img_name, is_famous in zip(shuffled, flags):
-        img_path = os.path.join(self.image_folder, img_name)
-        pixmap = QPixmap(img_path).scaled(200, 200)
-        label = QLabel()
-        label.setPixmap(pixmap)
-    
-        btn = QPushButton("Choisir")
-        btn.clicked.connect(self.make_click_handler(is_famous))  # ✅ fix ici
-    
-        box = QVBoxLayout()
-        box_widget = QWidget()
-        box.addWidget(label)
-        box.addWidget(btn)
-        box_widget.setLayout(box)
-        self.image_layout.addWidget(box_widget)
+            img_path = os.path.join(self.image_folder, img_name)
+            pixmap = QPixmap(img_path).scaled(200, 200)
+            label = QLabel()
+            label.setPixmap(pixmap)
+
+            btn = QPushButton("Choisir")
+            btn.clicked.connect(lambda _, f=is_famous: self.handle_click(f))
+
+            box = QVBoxLayout()
+            box_widget = QWidget()
+            box.addWidget(label)
+            box.addWidget(btn)
+            box_widget.setLayout(box)
+            self.image_layout.addWidget(box_widget)
 
         if self.mode == "timer":
             self.timer.start(self.timer_duration * 1000)
-
-    def make_click_handler(self, is_famous):
-        def handler():
-            self.handle_click(is_famous)
-        return handler
 
     def handle_click(self, is_famous):
         if not self.session_active:
