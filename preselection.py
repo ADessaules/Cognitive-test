@@ -166,6 +166,16 @@ class BisectionTest(QWidget):
         self.setMouseTracking(True)
         self.generate_new_bar()
 
+        self.btn_stop = QPushButton("Stopper le test")
+        self.btn_stop.setStyleSheet("font-size: 18px; background-color: red; color: white; padding: 5px;")
+        self.btn_stop.clicked.connect(self.stop_test)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.btn_stop)
+        layout.addStretch()  # Pour placer en haut
+        self.setLayout(layout)
+
+
     def generate_new_bar(self):
         dpi = self.logicalDpiX()
         pixels_per_cm = dpi / 2.54
@@ -211,6 +221,11 @@ class BisectionTest(QWidget):
         else:
             QMessageBox.information(self, "Terminé", "Test de bisection terminé.")
             self.close()
+
+    def stop_test(self):
+        QMessageBox.information(self, "Test interrompu", "Test de bisection arrêté prématurément.")
+        self.close()
+
 
 class SelectionPatientDialog(QDialog):
     def __init__(self, callback):
@@ -273,6 +288,12 @@ class SelectionCelebrites(QDialog):
         self.btn_valider.clicked.connect(self.valider_selection)
         self.layout.addWidget(self.btn_valider)
 
+        self.btn_stop = QPushButton("Stopper le test")
+        self.btn_stop.setStyleSheet("font-size: 18px; padding: 10px; background-color: red; color: white;")
+        self.btn_stop.clicked.connect(self.stop_test)
+        self.layout.addWidget(self.btn_stop)
+
+
         self.setLayout(self.layout)
 
         self.afficher_celebrite_grid()
@@ -320,15 +341,42 @@ class SelectionCelebrites(QDialog):
     def valider_selection(self):
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
+    
+        # Supprimer les anciennes sélections du patient
+        cursor.execute("DELETE FROM selections WHERE patient_id = ?", (self.patient_id,))
+    
+        # Insérer les nouvelles sélections
         for info in self.selections.values():
             if info["selected"]:
                 cursor.execute(
                     "INSERT INTO selections (patient_id, nom, image) VALUES (?, ?, ?)",
                     (self.patient_id, info["nom"], info["image"])
                 )
+    
         conn.commit()
         conn.close()
-        QMessageBox.information(self, "Enregistré", "Sélection enregistrée.")
+        QMessageBox.information(self, "Enregistré", "Sélection mise à jour avec succès.")
+        self.close()
+
+    def stop_test(self):
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+    
+        # Supprimer les anciennes sélections du patient
+        cursor.execute("DELETE FROM selections WHERE patient_id = ?", (self.patient_id,))
+    
+        # Insérer les nouvelles sélections
+        for info in self.selections.values():
+            if info["selected"]:
+                cursor.execute(
+                    "INSERT INTO selections (patient_id, nom, image) VALUES (?, ?, ?)",
+                    (self.patient_id, info["nom"], info["image"])
+                )
+    
+        conn.commit()
+        conn.close()
+
+        QMessageBox.information(self, "Test interrompu", "Test arrêté. Sélections sauvegardées.")
         self.close()
 
 
@@ -435,6 +483,17 @@ class DetailsPatient(QDialog):
                 row += 2
         self.contenu.addLayout(grid)
 
+        btn_revoir_selection = QPushButton("Modifier la Sélection")
+        btn_revoir_selection.setStyleSheet("font-size: 16px; padding: 5px; background-color: orange; color: white;")
+        btn_revoir_selection.clicked.connect(self.revoir_selection)
+        self.contenu.addWidget(btn_revoir_selection)
+
+    def revoir_selection(self):
+        self.selection_fenetre = SelectionCelebrites(self.patient_id)
+        self.selection_fenetre.show()
+
+
+
     def afficher_bisection(self):
         # Fenêtre de test
         self.clear_contenu()
@@ -466,6 +525,16 @@ class DetailsPatient(QDialog):
         label = QLabel(resultats_text)
         label.setStyleSheet("font-size: 16px;")
         self.contenu.addWidget(label)
+
+        # Bouton pour relancer/revoir le test
+        btn_rejouer = QPushButton("Revoir ou Continuer le Test")
+        btn_rejouer.setStyleSheet("font-size: 16px; padding: 5px; background-color: #007BFF; color: white;")
+        btn_rejouer.clicked.connect(self.relancer_bisection)
+        self.contenu.addWidget(btn_rejouer)
+
+    def relancer_bisection(self):
+        self.bisection_fenetre = BisectionTest(self.patient_id)
+        self.bisection_fenetre.show()
 
 
 
