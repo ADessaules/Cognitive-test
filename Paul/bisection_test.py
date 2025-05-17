@@ -1,0 +1,77 @@
+from PyQt6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QMessageBox
+from PyQt6.QtGui import QPainter, QPen
+import sqlite3
+from PyQt6.QtCore import Qt
+import random
+from constant import DB_FILE
+
+class BisectionTest(QWidget):
+    def __init__(self, patient_id):
+        super().__init__()
+        self.setWindowTitle("Test de Bisection")
+        self.setGeometry(300, 300, 600, 600)
+        self.patient_id = patient_id
+        self.attempt = 0
+        self.total_attempts = 10
+        self.setMouseTracking(True)
+        self.generate_new_bar()
+
+        self.btn_stop = QPushButton("Stopper le test")
+        self.btn_stop.setStyleSheet("font-size: 18px; background-color: red; color: white; padding: 5px;")
+        self.btn_stop.clicked.connect(self.stop_test)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.btn_stop)
+        layout.addStretch()  # Pour placer en haut
+        self.setLayout(layout)
+
+
+    def generate_new_bar(self):
+        dpi = self.logicalDpiX()
+        pixels_per_cm = dpi / 2.54
+        length = 20 * pixels_per_cm  # 20 cm
+
+        margin = length / 2 + 10
+        cx = random.uniform(margin, self.width() - margin)
+        cy = random.uniform(margin, self.height() - margin)
+
+        # Bar horizontale
+        self.x1, self.y1 = cx - length / 2, cy
+        self.x2, self.y2 = cx + length / 2, cy
+
+        self.bar_cx = cx  # stocke le centre pour le calcul
+        self.bar_cy = cy
+        self.update()
+
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        pen = QPen(Qt.GlobalColor.black, 5)
+        painter.setPen(pen)
+        painter.drawLine(int(self.x1), int(self.y1), int(self.x2), int(self.y2))
+
+    def mousePressEvent(self, event):
+        if self.attempt >= self.total_attempts:
+            return
+
+        clic_x, clic_y = event.position().x(), event.position().y()
+
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO bisection (patient_id, x1, y1, x2, y2, clic_x, clic_y)
+            VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (self.patient_id, self.x1, self.y1, self.x2, self.y2, clic_x, clic_y))
+        conn.commit()
+        conn.close()
+
+        self.attempt += 1
+        if self.attempt < self.total_attempts:
+            self.generate_new_bar()
+        else:
+            QMessageBox.information(self, "Terminé", "Test de bisection terminé.")
+            self.close()
+
+    def stop_test(self):
+        QMessageBox.information(self, "Test interrompu", "Test de bisection arrêté prématurément.")
+        self.close()
