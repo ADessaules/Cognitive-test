@@ -13,6 +13,17 @@ from PyQt6.QtGui import QPixmap, QKeyEvent
 from PyQt6.QtCore import QTimer, Qt
 import pandas as pd
 
+class WaitingScreen(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Écran d'attente")
+        self.setGeometry(920, 100, 800, 600)
+        layout = QVBoxLayout()
+        label = QLabel("Appuyez sur Espace pour démarrer le test")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(label)
+        self.setLayout(layout)
+
 class PatientWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -78,6 +89,7 @@ class FamousFaceTest(QMainWindow):
         self.timer.timeout.connect(self.handle_timeout)
 
         self.patient_window = PatientWindow()
+        self.waiting_screen = WaitingScreen()
         self.space_mode = False
 
         self.init_ui()
@@ -142,20 +154,20 @@ class FamousFaceTest(QMainWindow):
         except ValueError:
             self.timer_duration = 3
 
-        self.wait_label = QLabel("Appuyez sur Espace pour démarrer le test")
-        self.layout.addWidget(self.wait_label)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setFocus()
 
+        self.waiting_screen.show()
+
     def keyReleaseEvent(self, event):
-        if event.key() == Qt.Key.Key_Space and not self.session_active:
+        if event.key() == Qt.Key.Key_Space and not self.session_active and self.waiting_screen.isVisible():
+            self.waiting_screen.hide()
             self.session_active = True
             self.current_index = 0
             self.click_times = []
             self.error_indices = []
             self.current_triplets = self.all_triplets[:]
             random.shuffle(self.current_triplets)
-            self.wait_label.hide()
             self.patient_window.show()
             self.show_triplet()
 
@@ -217,6 +229,8 @@ class FamousFaceTest(QMainWindow):
             return
 
         self.session_active = False
+        self.patient_window.hide()
+
         session_id = str(uuid.uuid4())
         session_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         result_dict = {
