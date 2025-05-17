@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QPushButton,
     QVBoxLayout, QHBoxLayout, QLineEdit, QMessageBox, QComboBox
 )
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QPixmap, QKeyEvent
 from PyQt6.QtCore import QTimer, Qt
 import pandas as pd
 
@@ -48,7 +48,7 @@ class FamousFaceTest(QMainWindow):
         triplet_dict = {}
         for img in all_images:
             try:
-                prefix = img.split("_")[1]  # ex: "4" dans "image_4_0"
+                prefix = img.split("_")[1]
                 if prefix not in triplet_dict:
                     triplet_dict[prefix] = []
                 triplet_dict[prefix].append(img)
@@ -78,6 +78,7 @@ class FamousFaceTest(QMainWindow):
         self.timer.timeout.connect(self.handle_timeout)
 
         self.patient_window = PatientWindow()
+        self.space_mode = False
 
         self.init_ui()
 
@@ -93,29 +94,38 @@ class FamousFaceTest(QMainWindow):
 
         self.mode_label = QLabel("Mode d'affichage des images :")
         self.mode_selector = QComboBox()
-        self.mode_selector.addItems(["Image au clic", "Temps imparti"])
+        self.mode_selector.addItems(["Image au clic", "Temps imparti", "Barre espace"])
         self.mode_selector.currentTextChanged.connect(self.toggle_timer_input)
 
         self.timer_input = QLineEdit()
         self.timer_input.setPlaceholderText("Temps (en secondes)")
         self.timer_input.setVisible(False)
 
-        self.validate_btn = QPushButton("Valider")
-        self.validate_btn.clicked.connect(self.start_configuration)
+        self.start_btn = QPushButton("Valider et Préparer le test")
+        self.start_btn.clicked.connect(self.prepare_test)
+
+        self.stop_btn = QPushButton("Arrêter et sauvegarder")
+        self.stop_btn.clicked.connect(self.end_session)
 
         self.layout.addWidget(self.prenom_input)
         self.layout.addWidget(self.nom_input)
         self.layout.addWidget(self.mode_label)
         self.layout.addWidget(self.mode_selector)
         self.layout.addWidget(self.timer_input)
-        self.layout.addWidget(self.validate_btn)
+        self.layout.addWidget(self.start_btn)
+        self.layout.addWidget(self.stop_btn)
 
         self.central_widget.setLayout(self.layout)
 
     def toggle_timer_input(self):
-        self.timer_input.setVisible(self.mode_selector.currentText() == "Temps imparti")
+        mode = self.mode_selector.currentText()
+        self.timer_input.setVisible(mode == "Temps imparti")
 
-    def start_configuration(self):
+    def keyPressEvent(self, event):
+        if self.space_mode and event.key() == Qt.Key.Key_Space:
+            self.handle_click(is_famous=False, space=True)
+
+    def prepare_test(self):
         prenom = self.prenom_input.text().strip()
         nom = self.nom_input.text().strip()
         if not prenom or not nom:
@@ -123,22 +133,31 @@ class FamousFaceTest(QMainWindow):
             return
 
         self.participant_name = f"{prenom} {nom}"
-        self.mode = "timer" if self.mode_selector.currentText() == "Temps imparti" else "click"
+        mode_text = self.mode_selector.currentText()
+        self.mode = "timer" if mode_text == "Temps imparti" else "click" if mode_text == "Image au clic" else "space"
+        self.space_mode = self.mode == "space"
+
         try:
             self.timer_duration = int(self.timer_input.text()) if self.mode == "timer" else 0
         except ValueError:
             self.timer_duration = 3
 
-        self.session_active = True
-        self.current_index = 0
-        self.click_times = []
-        self.error_indices = []
+        self.wait_label = QLabel("Appuyez sur Espace pour démarrer le test")
+        self.layout.addWidget(self.wait_label)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setFocus()
 
-        self.current_triplets = self.all_triplets[:]
-        random.shuffle(self.current_triplets)
-
-        self.patient_window.show()
-        self.show_triplet()
+    def keyReleaseEvent(self, event):
+        if event.key() == Qt.Key.Key_Space and not self.session_active:
+            self.session_active = True
+            self.current_index = 0
+            self.click_times = []
+            self.error_indices = []
+            self.current_triplets = self.all_triplets[:]
+            random.shuffle(self.current_triplets)
+            self.wait_label.hide()
+            self.patient_window.show()
+            self.show_triplet()
 
     def show_triplet(self):
         if self.current_index >= len(self.current_triplets):
@@ -170,9 +189,10 @@ class FamousFaceTest(QMainWindow):
             self.handle_click(is_famous)
         return handler
 
-    def handle_click(self, is_famous):
+    def handle_click(self, is_famous, space=False):
         if not self.session_active:
             return
+
         if self.timer.isActive():
             self.timer.stop()
 
@@ -193,6 +213,9 @@ class FamousFaceTest(QMainWindow):
         self.show_triplet()
 
     def end_session(self):
+        if not self.session_active:
+            return
+
         self.session_active = False
         session_id = str(uuid.uuid4())
         session_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -230,4 +253,3 @@ if __name__ == "__main__":
     window = FamousFaceTest()
     window.show()
     sys.exit(app.exec())
-
