@@ -3,7 +3,11 @@ from PyQt6.QtGui import QPainter, QPen, QFont
 import sqlite3
 from PyQt6.QtCore import Qt
 import random
-from constant import DB_FILE
+from constant import DB_FILE, DOSSIER_PATIENTS
+import time
+import pandas as pd
+from datetime import datetime
+import os
 
 class BisectionTest(QWidget):
     def __init__(self, patient_id):
@@ -14,19 +18,23 @@ class BisectionTest(QWidget):
         self.attempt = 0
         self.total_attempts = 10
         self.setMouseTracking(True)
-        self.generate_new_bar()
+
         self.waiting_for_space = True
         self.waiting_for_input = False
+        self.start_time = None
+        self.trial_start_time = None
+        self.trial_data = []
+
+        self.generate_new_bar() 
 
         self.btn_stop = QPushButton("Stopper le test")
         self.btn_stop.setStyleSheet("font-size: 18px; background-color: red; color: white; padding: 5px;")
         self.btn_stop.clicked.connect(self.stop_test)
         self.btn_stop.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
-
         layout = QVBoxLayout()
         layout.addWidget(self.btn_stop)
-        layout.addStretch()  # Pour placer en haut
+        layout.addStretch()
         self.setLayout(layout)
 
         self.label_message = QLabel("Appuyez sur ESPACE pour commencer le test", self)
@@ -35,32 +43,35 @@ class BisectionTest(QWidget):
         self.label_message.setGeometry(50, 250, 500, 100)
         self.label_message.show()
 
-
     def generate_new_bar(self):
         dpi = self.logicalDpiX()
         pixels_per_cm = dpi / 2.54
-        length = 20 * pixels_per_cm  # 20 cm
+        length = 20 * pixels_per_cm
 
         margin = length / 2 + 10
         cx = random.uniform(margin, self.width() - margin)
         cy = random.uniform(margin, self.height() - margin)
 
-        # Bar horizontale
+        
         self.x1, self.y1 = cx - length / 2, cy
         self.x2, self.y2 = cx + length / 2, cy
 
-        self.bar_cx = cx  # stocke le centre pour le calcul
+        self.bar_cx = cx  
         self.bar_cy = cy
 
         self.fake_click_position = None
         self.waiting_for_input = True
         self.update()
 
+        if self.attempt == 0 and self.start_time is None:
+            self.start_time = time.time()  
+
+        self.trial_start_time = time.time()
 
     def paintEvent(self, event):
         painter = QPainter(self)
         if self.waiting_for_space:
-            return  # Ne rien dessiner avant le début
+            return  
 
         pen = QPen(Qt.GlobalColor.black, 5)
         painter.setPen(pen)
@@ -78,11 +89,28 @@ class BisectionTest(QWidget):
                 self.waiting_for_space = False
                 self.generate_new_bar()
             elif self.waiting_for_input and self.fake_click_position is None:
-                # Enregistre comme "non fait"
                 self.record_click(None, None)
 
-
     def record_click(self, clic_x, clic_y):
+
+        now = time.time()
+        response_time = now - self.trial_start_time if self.trial_start_time else None
+        elapsed_since_start = now - self.start_time if self.start_time else None
+
+        if clic_x is not None and clic_y is not None:
+            ecart_cm = (clic_x - self.bar_cx) / (self.logicalDpiX() / 2.54)
+            reponse = round(ecart_cm, 2)
+        else:
+            reponse = "non fait"
+
+        self.trial_data.append({
+        "Essai": self.attempt + 1,
+        "Temps total (s)": round(elapsed_since_start, 2) if elapsed_since_start else "NA",
+        "Réponse": reponse,
+        "Temps de réponse (s)": round(response_time, 2) if response_time else "NA"
+        })
+
+
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
         cursor.execute("""
@@ -99,8 +127,35 @@ class BisectionTest(QWidget):
             self.generate_new_bar()
         else:
             QMessageBox.information(self, "Terminé", "Test de bisection terminé.")
+            self.export_results()
             self.close()
 
     def stop_test(self):
         QMessageBox.information(self, "Test interrompu", "Test de bisection arrêté prématurément.")
+        self.export_results()
         self.close()
+
+    def export_results(self):
+        if not self.trial_data:
+            return
+
+        patient_name = self.get_patient_name()
+        date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        parametres = "20cm"
+        nom_test = "Bisection"
+        nom_fichier = f"{patient_name}_{date_str}_{parametres}_{nom_test}.xlsx"
+
+        dossier_patient = os.path.join(DOSSIER_PATIENTS, patient_name)
+        os.makedirs(dossier_patient, exist_ok=True)
+
+        df = pd.DataFrame(self.trial_data)
+        chemin = os.path.join(dossier_patient, nom_fichier)
+        df.to_excel(chemin, index=False)
+
+    def get_patient_name(self):
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT nom FROM patients WHERE id = ?", (self.patient_id,))
+        result = cursor.fetchone()
+        conn.close()
+        return result[0] if result else f"patient_{self.patient_id}"
