@@ -17,7 +17,6 @@ class BisectionTest(QWidget):
         self.generate_new_bar()
         self.waiting_for_space = True
         self.waiting_for_input = False
-        #self.fake_click_position = None
 
         self.btn_stop = QPushButton("Stopper le test")
         self.btn_stop.setStyleSheet("font-size: 18px; background-color: red; color: white; padding: 5px;")
@@ -79,9 +78,8 @@ class BisectionTest(QWidget):
                 self.waiting_for_space = False
                 self.generate_new_bar()
             elif self.waiting_for_input and self.fake_click_position is None:
-                # Simule un clic au centre horizontalement (vous pouvez adapter cette stratégie)
-                self.fake_click_position = (self.bar_cx, self.bar_cy)
-                self.record_click(*self.fake_click_position)
+                # Enregistre comme "non fait"
+                self.record_click(None, None)
 
 
     def record_click(self, clic_x, clic_y):
@@ -95,7 +93,7 @@ class BisectionTest(QWidget):
         conn.close()
 
         self.attempt += 1
-        self.waiting_for_input = False
+        self.fake_click_position  = False
 
         if self.attempt < self.total_attempts:
             self.generate_new_bar()

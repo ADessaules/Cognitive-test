@@ -30,7 +30,7 @@ class DetailsPatient(QDialog):
         self.layout.addLayout(self.contenu)
 
         self.setLayout(self.layout)
-        self.afficher_selections()  # Affiche par défaut les sélections
+        self.afficher_selections()
 
     def clear_contenu(self):
         def clear_layout(layout):
@@ -103,8 +103,11 @@ class DetailsPatient(QDialog):
 
         for i, (x1, y1, x2, y2, clic_x, clic_y) in enumerate(resultats, 1):
             mx = (x1 + x2) / 2
-            delta_cm = (clic_x - mx) / pixels_per_cm
-            resultats_text += f"Essai {i} : Erreur = {delta_cm:+.2f} cm\n"
+            if clic_x is None:
+                resultats_text += f"Essai {i} : non fait (skippé)\n"
+            else:
+                delta_cm = (clic_x - mx) / pixels_per_cm
+                resultats_text += f"Essai {i} : Erreur = {delta_cm:+.2f} cm\n"
 
         label = QLabel(resultats_text)
         label.setStyleSheet("font-size: 16px;")
