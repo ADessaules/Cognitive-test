@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QPushButton,
     QVBoxLayout, QHBoxLayout, QLineEdit, QMessageBox, QComboBox
 )
-from PyQt6.QtGui import QPixmap, QKeyEvent
+from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import QTimer, Qt
 import pandas as pd
 
@@ -43,6 +43,30 @@ class PatientWindow(QWidget):
             label = QLabel()
             label.setPixmap(pixmap)
             label.mousePressEvent = handler
+            self.image_layout.addWidget(label)
+
+class MirrorWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Vue patient pour l'expérimentateur")
+        self.setGeometry(950, 250, 800, 300)
+        self.image_layout = QHBoxLayout()
+        self.setLayout(self.image_layout)
+
+    def show_images(self, triplet, flags, selected_index=None):
+        for i in reversed(range(self.image_layout.count())):
+            widget = self.image_layout.itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
+
+        for i, (img_path, is_famous) in enumerate(zip(triplet, flags)):
+            pixmap = QPixmap(img_path).scaled(200, 200, Qt.AspectRatioMode.KeepAspectRatio)
+            label = QLabel()
+            label.setPixmap(pixmap)
+            border = "2px solid grey"
+            if selected_index == i:
+                border = "2px solid green" if is_famous else "2px solid red"
+            label.setStyleSheet(f"border: {border}; margin: 5px;")
             self.image_layout.addWidget(label)
 
 class FamousFaceTest(QMainWindow):
@@ -84,12 +108,14 @@ class FamousFaceTest(QMainWindow):
 
         self.mode = "click"
         self.timer_duration = 3
+        self.selected_index = None
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.handle_timeout)
 
         self.patient_window = PatientWindow()
         self.waiting_screen = WaitingScreen()
+        self.mirror_window = MirrorWindow()
         self.space_mode = False
 
         self.init_ui()
@@ -169,6 +195,7 @@ class FamousFaceTest(QMainWindow):
             self.current_triplets = self.all_triplets[:]
             random.shuffle(self.current_triplets)
             self.patient_window.show()
+            self.mirror_window.show()
             self.show_triplet()
 
     def show_triplet(self):
@@ -187,17 +214,20 @@ class FamousFaceTest(QMainWindow):
         flags = [img == famous_img for img in shuffled]
 
         self.start_time = time.time()
+        self.selected_index = None
 
         img_paths = [os.path.join(self.image_folder, img_name) for img_name in shuffled]
-        handlers = [self.make_click_handler(is_famous) for is_famous in flags]
+        handlers = [self.make_click_handler(is_famous, i) for i, is_famous in enumerate(flags)]
 
         self.patient_window.show_images(img_paths, handlers)
+        self.mirror_window.show_images(img_paths, flags, selected_index=None)
 
         if self.mode == "timer":
             self.timer.start(self.timer_duration * 1000)
 
-    def make_click_handler(self, is_famous):
+    def make_click_handler(self, is_famous, index):
         def handler(event):
+            self.selected_index = index
             self.handle_click(is_famous)
         return handler
 
@@ -214,8 +244,18 @@ class FamousFaceTest(QMainWindow):
         if not is_famous:
             self.error_indices.append(self.current_index)
 
+        self.update_mirror_feedback()
         self.current_index += 1
         QTimer.singleShot(500, self.show_triplet)
+
+    def update_mirror_feedback(self):
+        current_images = self.current_triplets[self.current_index]
+        famous_img = next((img for img in current_images if "_0." in img), None)
+        shuffled = current_images[:]
+        random.shuffle(shuffled)
+        flags = [img == famous_img for img in shuffled]
+        img_paths = [os.path.join(self.image_folder, img_name) for img_name in shuffled]
+        self.mirror_window.show_images(img_paths, flags, selected_index=self.selected_index)
 
     def handle_timeout(self):
         self.timer.stop()
@@ -230,6 +270,7 @@ class FamousFaceTest(QMainWindow):
 
         self.session_active = False
         self.patient_window.hide()
+        self.mirror_window.hide()
 
         session_id = str(uuid.uuid4())
         session_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
