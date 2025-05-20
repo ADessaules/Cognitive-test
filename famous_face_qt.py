@@ -23,8 +23,6 @@ class WaitingScreen(QWidget):
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(label)
         self.setLayout(layout)
-        self.trial_results = []  # liste de dicts pour chaque essai
-        self.session_start_time = None
 
 class PatientWindow(QWidget):
     def __init__(self):
@@ -55,7 +53,6 @@ class FamousFaceTest(QMainWindow):
 
         self.image_folder = "image_famous_faceV1"
         self.test_name = "famous_face"
-        self.results_file = "resultats_test.xlsx"
 
         all_images = [img for img in os.listdir(self.image_folder) if img.lower().endswith((".png", ".jpg", ".jpeg"))]
         triplet_dict = {}
@@ -80,6 +77,8 @@ class FamousFaceTest(QMainWindow):
         self.current_index = 0
         self.click_times = []
         self.error_indices = []
+        self.trial_results = []
+        self.session_start_time = None
         self.start_time = None
         self.session_active = False
         self.participant_name = ""
@@ -107,7 +106,6 @@ class FamousFaceTest(QMainWindow):
         self.prenom_input.setPlaceholderText("Prénom")
         self.nom_input = QLineEdit()
         self.nom_input.setPlaceholderText("Nom")
-
         self.contact_input = QLineEdit()
         self.contact_input.setPlaceholderText("Contacts de stimulation")
         self.intensite_input = QLineEdit()
@@ -181,15 +179,16 @@ class FamousFaceTest(QMainWindow):
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key.Key_Space and not self.session_active and self.waiting_screen.isVisible():
-            self.session_start_time = time.time()
             self.waiting_screen.hide()
             self.session_active = True
             self.current_index = 0
             self.click_times = []
             self.error_indices = []
+            self.trial_results = []
             self.current_triplets = self.all_triplets[:]
             random.shuffle(self.current_triplets)
             self.patient_window.show()
+            self.session_start_time = time.time()
             self.show_triplet()
 
     def show_triplet(self):
@@ -251,12 +250,11 @@ class FamousFaceTest(QMainWindow):
         now = time.time()
         reaction_time = round(now - self.start_time, 3)
         elapsed_since_start = round(now - self.session_start_time, 3)
-        
+
         self.click_times.append(reaction_time)
         if not is_famous:
             self.error_indices.append(self.current_index)
-        
-        # Sauvegarde d'une ligne de résultat
+
         self.trial_results.append({
             "id_essai": self.current_index + 1,
             "temps_total_depuis_debut": elapsed_since_start,
@@ -276,11 +274,12 @@ class FamousFaceTest(QMainWindow):
 
     def handle_timeout(self):
         self.timer.stop()
-        self.click_times.append(self.timer_duration)
-        self.error_indices.append(self.current_index)
         now = time.time()
         elapsed_since_start = round(now - self.session_start_time, 3)
-        
+
+        self.click_times.append(self.timer_duration)
+        self.error_indices.append(self.current_index)
+
         self.trial_results.append({
             "id_essai": self.current_index + 1,
             "temps_total_depuis_debut": elapsed_since_start,
@@ -289,6 +288,7 @@ class FamousFaceTest(QMainWindow):
             "temps_reponse": self.timer_duration,
             "horodatage_stimulation": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         })
+
         self.current_index += 1
         self.show_triplet()
 
@@ -299,12 +299,7 @@ class FamousFaceTest(QMainWindow):
         self.session_active = False
         self.patient_window.hide()
 
-        session_id = str(uuid.uuid4())
-        session_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        # Crée un DataFrame ligne par essai
         df_trials = pd.DataFrame(self.trial_results)
-        
-        # Ajout d’une ligne finale de résumé
         summary = {
             "id_essai": "TOTAL",
             "temps_total_depuis_debut": "",
@@ -313,12 +308,11 @@ class FamousFaceTest(QMainWindow):
             "temps_reponse": round(df_trials['temps_reponse'].mean(), 3) if not df_trials.empty else "NA",
             "horodatage_stimulation": ""
         }
+
         df_trials = pd.concat([df_trials, pd.DataFrame([summary])], ignore_index=True)
-        
-        # Création du nom du fichier
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         nom_fichier = f"{self.participant_name.replace(' ', '')}_{timestamp}_{self.stim_contact}-{self.stim_intensite}-{self.stim_duree}_{self.test_name}.xlsx"
-        
+
         try:
             df_trials.to_excel(nom_fichier, index=False, engine='openpyxl')
             QMessageBox.information(self, "Fin", f"Test terminé. Résultats sauvegardés dans {nom_fichier}.")
