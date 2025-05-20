@@ -86,6 +86,7 @@ class FamousFaceTest(QMainWindow):
         self.timer_duration = 3
         self.space_mode = False
         self.selected_index = None
+        self.experimenter_labels = []
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.handle_timeout)
@@ -99,7 +100,6 @@ class FamousFaceTest(QMainWindow):
         self.setCentralWidget(self.central_widget)
         self.main_layout = QHBoxLayout()
 
-        # Left config panel
         self.config_layout = QVBoxLayout()
         self.prenom_input = QLineEdit()
         self.prenom_input.setPlaceholderText("Prénom")
@@ -129,7 +129,6 @@ class FamousFaceTest(QMainWindow):
         self.config_layout.addWidget(self.start_btn)
         self.config_layout.addWidget(self.stop_btn)
 
-        # Right image panel (copy of patient view)
         self.image_layout = QHBoxLayout()
         self.image_panel = QWidget()
         self.image_panel.setLayout(self.image_layout)
@@ -180,15 +179,13 @@ class FamousFaceTest(QMainWindow):
             self.show_triplet()
 
     def show_triplet(self):
-        for i in reversed(range(self.image_layout.count())):
-            widget = self.image_layout.itemAt(i).widget()
-            if widget:
-                widget.setParent(None)
+        for layout in (self.image_layout, self.patient_window.image_layout):
+            for i in reversed(range(layout.count())):
+                widget = layout.itemAt(i).widget()
+                if widget:
+                    widget.setParent(None)
 
-        for i in reversed(range(self.patient_window.image_layout.count())):
-            widget = self.patient_window.image_layout.itemAt(i).widget()
-            if widget:
-                widget.setParent(None)
+        self.experimenter_labels.clear()
 
         if self.current_index >= len(self.current_triplets):
             self.end_session()
@@ -210,16 +207,16 @@ class FamousFaceTest(QMainWindow):
             img_path = os.path.join(self.image_folder, img_name)
             pixmap = QPixmap(img_path).scaled(200, 200, Qt.AspectRatioMode.KeepAspectRatio)
 
-            # Patient view (interactive)
             label_patient = QLabel()
             label_patient.setPixmap(pixmap)
             label_patient.mousePressEvent = self.make_click_handler(is_famous, idx)
             self.patient_window.image_layout.addWidget(label_patient)
 
-            # Experimenter view (mirror only)
             label_mirror = QLabel()
             label_mirror.setPixmap(pixmap)
+            label_mirror.setStyleSheet("border: 2px solid transparent; margin: 5px;")
             self.image_layout.addWidget(label_mirror)
+            self.experimenter_labels.append(label_mirror)
 
         if self.mode == "timer":
             self.timer.start(self.timer_duration * 1000)
@@ -242,6 +239,12 @@ class FamousFaceTest(QMainWindow):
 
         if not is_famous:
             self.error_indices.append(self.current_index)
+
+        # Visual feedback on experimenter screen
+        for i, label in enumerate(self.experimenter_labels):
+            if i == self.selected_index:
+                color = "green" if self.flags[i] else "red"
+                label.setStyleSheet(f"border: 4px solid {color}; margin: 5px;")
 
         self.current_index += 1
         QTimer.singleShot(500, self.show_triplet)
