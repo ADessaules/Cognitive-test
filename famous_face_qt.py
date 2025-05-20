@@ -24,11 +24,32 @@ class WaitingScreen(QWidget):
         layout.addWidget(label)
         self.setLayout(layout)
 
+class PatientWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Test en cours - Écran patient")
+        self.setGeometry(920, 100, 800, 600)
+        self.image_layout = QHBoxLayout()
+        self.setLayout(self.image_layout)
+
+    def show_images(self, triplet, click_handlers):
+        for i in reversed(range(self.image_layout.count())):
+            widget = self.image_layout.itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
+
+        for img_path, handler in zip(triplet, click_handlers):
+            pixmap = QPixmap(img_path).scaled(200, 200, Qt.AspectRatioMode.KeepAspectRatio)
+            label = QLabel()
+            label.setPixmap(pixmap)
+            label.mousePressEvent = handler
+            self.image_layout.addWidget(label)
+
 class FamousFaceTest(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Famous Face Test - Expérimentateur")
-        self.setGeometry(100, 100, 1000, 600)
+        self.setGeometry(100, 100, 1200, 600)
 
         self.image_folder = "image_famous_faceV1"
         self.test_name = "famous_face"
@@ -69,6 +90,7 @@ class FamousFaceTest(QMainWindow):
         self.timer = QTimer()
         self.timer.timeout.connect(self.handle_timeout)
 
+        self.patient_window = PatientWindow()
         self.waiting_screen = WaitingScreen()
         self.init_ui()
 
@@ -107,7 +129,7 @@ class FamousFaceTest(QMainWindow):
         self.config_layout.addWidget(self.start_btn)
         self.config_layout.addWidget(self.stop_btn)
 
-        # Right image panel (mirrored patient view)
+        # Right image panel (copy of patient view)
         self.image_layout = QHBoxLayout()
         self.image_panel = QWidget()
         self.image_panel.setLayout(self.image_layout)
@@ -154,11 +176,17 @@ class FamousFaceTest(QMainWindow):
             self.error_indices = []
             self.current_triplets = self.all_triplets[:]
             random.shuffle(self.current_triplets)
+            self.patient_window.show()
             self.show_triplet()
 
     def show_triplet(self):
         for i in reversed(range(self.image_layout.count())):
             widget = self.image_layout.itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
+
+        for i in reversed(range(self.patient_window.image_layout.count())):
+            widget = self.patient_window.image_layout.itemAt(i).widget()
             if widget:
                 widget.setParent(None)
 
@@ -181,11 +209,17 @@ class FamousFaceTest(QMainWindow):
         for idx, (img_name, is_famous) in enumerate(zip(shuffled, self.flags)):
             img_path = os.path.join(self.image_folder, img_name)
             pixmap = QPixmap(img_path).scaled(200, 200, Qt.AspectRatioMode.KeepAspectRatio)
-            label = QLabel()
-            label.setPixmap(pixmap)
-            label.setStyleSheet("border: 2px solid transparent; margin: 5px;")
-            label.mousePressEvent = self.make_click_handler(is_famous, idx)
-            self.image_layout.addWidget(label)
+
+            # Patient view (interactive)
+            label_patient = QLabel()
+            label_patient.setPixmap(pixmap)
+            label_patient.mousePressEvent = self.make_click_handler(is_famous, idx)
+            self.patient_window.image_layout.addWidget(label_patient)
+
+            # Experimenter view (mirror only)
+            label_mirror = QLabel()
+            label_mirror.setPixmap(pixmap)
+            self.image_layout.addWidget(label_mirror)
 
         if self.mode == "timer":
             self.timer.start(self.timer_duration * 1000)
@@ -209,16 +243,6 @@ class FamousFaceTest(QMainWindow):
         if not is_famous:
             self.error_indices.append(self.current_index)
 
-        # Color feedback on selection
-        for i in range(self.image_layout.count()):
-            label = self.image_layout.itemAt(i).widget()
-            if isinstance(label, QLabel):
-                if i == self.selected_index:
-                    color = "green" if self.flags[i] else "red"
-                    label.setStyleSheet(f"border: 3px solid {color}; margin: 5px;")
-                else:
-                    label.setStyleSheet("border: 2px solid transparent; margin: 5px;")
-
         self.current_index += 1
         QTimer.singleShot(500, self.show_triplet)
 
@@ -234,6 +258,7 @@ class FamousFaceTest(QMainWindow):
             return
 
         self.session_active = False
+        self.patient_window.hide()
 
         session_id = str(uuid.uuid4())
         session_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
