@@ -106,6 +106,13 @@ class FamousFaceTest(QMainWindow):
         self.nom_input = QLineEdit()
         self.nom_input.setPlaceholderText("Nom")
 
+        self.contact_input = QLineEdit()
+        self.contact_input.setPlaceholderText("Contacts de stimulation")
+        self.intensite_input = QLineEdit()
+        self.intensite_input.setPlaceholderText("Intensité (mA)")
+        self.duree_input = QLineEdit()
+        self.duree_input.setPlaceholderText("Durée (ms)")
+
         self.mode_label = QLabel("Mode d'affichage des images :")
         self.mode_selector = QComboBox()
         self.mode_selector.addItems(["Image au clic", "Temps imparti", "Barre espace"])
@@ -121,13 +128,9 @@ class FamousFaceTest(QMainWindow):
         self.stop_btn = QPushButton("Arrêter et sauvegarder")
         self.stop_btn.clicked.connect(self.end_session)
 
-        self.config_layout.addWidget(self.prenom_input)
-        self.config_layout.addWidget(self.nom_input)
-        self.config_layout.addWidget(self.mode_label)
-        self.config_layout.addWidget(self.mode_selector)
-        self.config_layout.addWidget(self.timer_input)
-        self.config_layout.addWidget(self.start_btn)
-        self.config_layout.addWidget(self.stop_btn)
+        for widget in [self.prenom_input, self.nom_input, self.contact_input, self.intensite_input, self.duree_input,
+                       self.mode_label, self.mode_selector, self.timer_input, self.start_btn, self.stop_btn]:
+            self.config_layout.addWidget(widget)
 
         self.image_layout = QHBoxLayout()
         self.image_panel = QWidget()
@@ -148,11 +151,19 @@ class FamousFaceTest(QMainWindow):
     def prepare_test(self):
         prenom = self.prenom_input.text().strip()
         nom = self.nom_input.text().strip()
-        if not prenom or not nom:
-            QMessageBox.warning(self, "Erreur", "Veuillez entrer un nom et prénom.")
+        contact = self.contact_input.text().strip()
+        intensite = self.intensite_input.text().strip()
+        duree = self.duree_input.text().strip()
+
+        if not all([prenom, nom, contact, intensite, duree]):
+            QMessageBox.warning(self, "Erreur", "Veuillez remplir tous les champs de stimulation et d'identité.")
             return
 
         self.participant_name = f"{prenom} {nom}"
+        self.stim_contact = contact
+        self.stim_intensite = intensite
+        self.stim_duree = duree
+
         mode_text = self.mode_selector.currentText()
         self.mode = "timer" if mode_text == "Temps imparti" else "click" if mode_text == "Image au clic" else "space"
         self.space_mode = self.mode == "space"
@@ -240,7 +251,6 @@ class FamousFaceTest(QMainWindow):
         if not is_famous:
             self.error_indices.append(self.current_index)
 
-        # Visual feedback on experimenter screen
         for i, label in enumerate(self.experimenter_labels):
             if i == self.selected_index:
                 color = "green" if self.flags[i] else "red"
@@ -272,6 +282,9 @@ class FamousFaceTest(QMainWindow):
             "nom_test": self.test_name,
             "choix_affichage": self.mode,
             "temps": self.timer_duration if self.mode == "timer" else "NA",
+            "contacts_stimulation": self.stim_contact,
+            "intensite": self.stim_intensite,
+            "duree": self.stim_duree,
             "nombre_erreurs": len(self.error_indices),
             "clics_temps": self.click_times,
             "moyenne_temps_clic": round(sum(self.click_times)/len(self.click_times), 3) if self.click_times else "NA"
