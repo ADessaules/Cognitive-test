@@ -310,8 +310,12 @@ class FamousFaceTest(QMainWindow):
         }
 
         df_trials = pd.concat([df_trials, pd.DataFrame([summary])], ignore_index=True)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        nom_fichier = f"{self.participant_name.replace(' ', '')}_{timestamp}_{self.stim_contact}-{self.stim_intensite}-{self.stim_duree}_{self.test_name}.xlsx"
+
+        now = datetime.now()
+        timestamp = now.strftime("%Y/%m/%d_%H-%M")
+        prenom_nom = self.participant_name.replace(" ", "").lower()
+        nom_fichier = f"{prenom_nom}_{timestamp}_{self.stim_contact}-{self.stim_intensite}-{self.stim_duree}_{self.test_name}.xlsx"
+        nom_fichier = nom_fichier.replace("/", "")  # retirer les / pour nom de fichier
 
         try:
             df_trials.to_excel(nom_fichier, index=False, engine='openpyxl')
