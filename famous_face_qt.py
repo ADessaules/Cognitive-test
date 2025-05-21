@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QPushButton,
     QVBoxLayout, QHBoxLayout, QLineEdit, QMessageBox, QComboBox
 )
-from PyQt6.QtGui import QPixmap, QScreen
+from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import QTimer, Qt
 import pandas as pd
 
@@ -28,7 +28,6 @@ class PatientWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Test en cours - Écran patient")
-        self.setGeometry(920, 100, 800, 600)
         self.image_layout = QHBoxLayout()
         self.setLayout(self.image_layout)
 
@@ -95,17 +94,25 @@ class FamousFaceTest(QMainWindow):
         self.patient_window = PatientWindow()
         self.waiting_screen = WaitingScreen()
         self.init_ui()
-        self.move_patient_window_to_secondary_screen()
+        self.assign_windows_to_screens()
 
-    def move_patient_window_to_secondary_screen(self):
+    def assign_windows_to_screens(self):
         screens = QApplication.screens()
         if len(screens) > 1:
+            main_screen = screens[0]
             secondary_screen = screens[1]
-            geometry = secondary_screen.geometry()
-            self.patient_window.move(geometry.topLeft())
-            self.waiting_screen.move(geometry.topLeft())
-            self.patient_window.resize(geometry.width(), geometry.height())
-            self.waiting_screen.resize(geometry.width(), geometry.height())
+
+            sec_geo = secondary_screen.geometry()
+            self.patient_window.move(sec_geo.left(), sec_geo.top())
+            self.patient_window.resize(sec_geo.width(), sec_geo.height())
+            self.patient_window.showFullScreen()
+
+            self.waiting_screen.move(sec_geo.left(), sec_geo.top())
+            self.waiting_screen.resize(sec_geo.width(), sec_geo.height())
+            self.waiting_screen.showFullScreen()
+        else:
+            self.patient_window.show()
+            self.waiting_screen.show()
 
     def toggle_timer_input(self):
         self.timer_input.setVisible(self.mode_selector.currentText() == "Temps imparti")
