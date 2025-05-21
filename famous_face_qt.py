@@ -28,6 +28,7 @@ class PatientWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Test en cours - Écran patient")
+        self.setGeometry(920, 100, 800, 600)
         self.image_layout = QHBoxLayout()
         self.setLayout(self.image_layout)
 
@@ -94,25 +95,6 @@ class FamousFaceTest(QMainWindow):
         self.patient_window = PatientWindow()
         self.waiting_screen = WaitingScreen()
         self.init_ui()
-        self.assign_windows_to_screens()
-
-    def assign_windows_to_screens(self):
-        screens = QApplication.screens()
-        if len(screens) > 1:
-            main_screen = screens[0]
-            secondary_screen = screens[1]
-
-            sec_geo = secondary_screen.geometry()
-            self.patient_window.move(sec_geo.left(), sec_geo.top())
-            self.patient_window.resize(sec_geo.width(), sec_geo.height())
-            self.patient_window.showFullScreen()
-
-            self.waiting_screen.move(sec_geo.left(), sec_geo.top())
-            self.waiting_screen.resize(sec_geo.width(), sec_geo.height())
-            self.waiting_screen.showFullScreen()
-        else:
-            self.patient_window.show()
-            self.waiting_screen.show()
 
     def toggle_timer_input(self):
         self.timer_input.setVisible(self.mode_selector.currentText() == "Temps imparti")
@@ -326,7 +308,7 @@ class FamousFaceTest(QMainWindow):
         df_trials = pd.concat([df_trials, pd.DataFrame([summary])], ignore_index=True)
 
         now = datetime.now()
-        timestamp = now.strftime("%Y%m%d_%H%M")
+        timestamp = now.strftime("%Y_%m_%d_%H%M")
         prenom_nom = self.participant_name.replace(" ", "").lower()
         nom_fichier = f"{prenom_nom}_{timestamp}_{self.stim_contact}-{self.stim_intensite}-{self.stim_duree}_{self.test_name}.xlsx"
 
