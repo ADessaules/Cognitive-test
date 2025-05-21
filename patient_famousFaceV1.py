@@ -20,23 +20,36 @@ class PatientWindow(QWidget):
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.verifier_nouvelle_commande)
-        self.timer.start(1000)
+        self.timer.start(1000)  # Vérifie toutes les secondes
 
         self.current_triplet = []
         self.start_time = None
 
     def verifier_nouvelle_commande(self):
+        print("[DEBUG] Vérification du fichier commande.json...")
+
         if not os.path.exists(SHARED_COMMAND_FILE):
+            print("[DEBUG] Aucun fichier de commande trouvé.")
             return
 
         try:
             with open(SHARED_COMMAND_FILE, "r") as f:
                 data = json.load(f)
-        except json.JSONDecodeError:
-            return  # Le fichier est peut-être en cours d'écriture
+                print("[DEBUG] Commande chargée :", data)
+        except json.JSONDecodeError as e:
+            print("[ERREUR] Fichier commande illisible :", e)
+            return
+        except Exception as e:
+            print("[ERREUR] Problème à l'ouverture du fichier commande.json :", e)
+            return
 
         self.afficher_images(data)
-        os.remove(SHARED_COMMAND_FILE)
+
+        try:
+            os.remove(SHARED_COMMAND_FILE)
+            print("[DEBUG] commande.json supprimé après lecture.")
+        except Exception as e:
+            print("[ERREUR] Impossible de supprimer commande.json :", e)
 
     def afficher_images(self, data):
         for i in reversed(range(self.image_layout.count())):
@@ -44,13 +57,23 @@ class PatientWindow(QWidget):
             if widget:
                 widget.setParent(None)
 
-        self.current_triplet = data["triplet"]
+        self.current_triplet = data.get("triplet", [])
         self.start_time = time.time()
-        self.nom = data["nom"]
-        self.prenom = data["prenom"]
+        self.nom = data.get("nom", "")
+        self.prenom = data.get("prenom", "")
+
+        if not self.current_triplet:
+            print("[ERREUR] Triplet vide ou manquant dans les données de commande.")
+            return
+
+        print(f"[DEBUG] Affichage de {len(self.current_triplet)} images pour {self.prenom} {self.nom}.")
 
         for img_name in self.current_triplet:
             img_path = os.path.join(IMAGE_FOLDER, img_name)
+            if not os.path.exists(img_path):
+                print(f"[ERREUR] Image non trouvée : {img_path}")
+                continue
+
             label = QLabel()
             pixmap = QPixmap(img_path).scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio)
             label.setPixmap(pixmap)
@@ -67,8 +90,12 @@ class PatientWindow(QWidget):
                 "temps_reponse": reaction_time,
                 "horodatage": time.strftime("%Y-%m-%d %H:%M:%S")
             }
-            with open(RESPONSE_FILE, "a") as f:
-                f.write(json.dumps(reponse) + "\n")
+            try:
+                with open(RESPONSE_FILE, "a") as f:
+                    f.write(json.dumps(reponse) + "\n")
+                print("[DEBUG] Réponse enregistrée :", reponse)
+            except Exception as e:
+                print("[ERREUR] Impossible d'enregistrer la réponse :", e)
 
             # Nettoyer l'écran après réponse
             for i in reversed(range(self.image_layout.count())):
