@@ -3,14 +3,14 @@ import os
 import random
 import time
 from datetime import datetime
+from pathlib import Path
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QPushButton,
     QVBoxLayout, QHBoxLayout, QLineEdit, QMessageBox, QComboBox
 )
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtCore import QTimer, Qt
+from PyQt6.QtCore import QTimer, Qt, QEvent
 import pandas as pd
-
 
 class WaitingScreen(QWidget):
     def __init__(self):
@@ -22,7 +22,6 @@ class WaitingScreen(QWidget):
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(label)
         self.setLayout(layout)
-
 
 class PatientWindow(QWidget):
     def __init__(self):
@@ -65,19 +64,6 @@ class FamousFaceTest(QMainWindow):
             except IndexError:
                 continue
 
-        self.triplet_names = [
-            "Sophie Marceau", "Tom cruise", "François Hollande", "Brad Pitt", "Patrick Sébastien",
-            "Angela Merkel", "Zinédine Zidane", "Georges Bush", "Léonardo Dicaprio", "Nicolas Sarkozy",
-            "Marine Le Pen", "Patrick Bruel", "Nagui", "Ségolène Royal", "Jacques Chirac", "Michel Drucker",
-            "Jean Reno", "Michel Sardou", "Vladimir Poutine", "Patrick Poivre d’Arvor", "Le Prince Charles",
-            "Jean-Jacques Goldman", "Georges Clooney", "Arnold Schwarzenegger", "Gérard Depardieu",
-            "Manuel Valls", "Florent Pagny", "Arthur", "François Mitterand", "Johnny Hallyday", "Gad Elmaleh",
-            "Mimie Mathy", "Alain Delon", "Renaud", "Jean Dujardin", "Dany Boon", "Vanessa Paradis",
-            "Bill Clinton", "Garou", "Muriel Robin", "Laurent Ruquier", "Claire Chazal", "Serge Gainsbourg",
-            "Céline Dion", "Guy Bedos", "Bernard Tapie", "Dominique  Strauss Kahn", "Fabrice Luchini",
-            "Charles Aznavour", "Jack Nicholson"
-        ]
-
         self.all_triplets = [
             sorted(images, key=lambda name: int(name.split("_")[2].split(".")[0]))
             for _, images in sorted(triplet_dict.items(), key=lambda item: int(item[0]))
@@ -87,15 +73,29 @@ class FamousFaceTest(QMainWindow):
         random.shuffle(self.all_triplets)
         self.current_triplets = self.all_triplets[:]
 
+        self.triplet_name_map = {
+            f"image_{i+1}_": name for i, name in enumerate([
+                "Sophie Marceau", "Tom cruise", "François Hollande", "Brad Pitt", "Patrick Sébastien",
+                "Angela Merkel", "Zinédine Zidane", "Georges Bush", "Léonardo Dicaprio", "Nicolas Sarkozy",
+                "Marine Le Pen", "Patrick Bruel", "Nagui", "Ségolène Royal", "Jacques Chirac", "Michel Drucker",
+                "Jean Reno", "Michel Sardou", "Vladimir Poutine", "Patrick Poivre d’Arvor", "Le Prince Charles",
+                "Jean-Jacques Goldman", "Georges Clooney", "Arnold Schwarzenegger", "Gérard Depardieu", "Manuel Valls",
+                "Florent Pagny", "Arthur", "François Mitterand", "Johnny Hallyday", "Gad Elmaleh", "Mimie Mathy",
+                "Alain Delon", "Renaud", "Jean Dujardin", "Dany Boon", "Vanessa Paradis", "Bill Clinton", "Garou",
+                "Muriel Robin", "Laurent Ruquier", "Claire Chazal", "Serge Gainsbourg", "Céline Dion", "Guy Bedos",
+                "Bernard Tapie", "Dominique  Strauss Kahn", "Fabrice Luchini", "Charles Aznavour", "Jack Nicholson"
+            ])
+        }
+
         self.current_index = 0
         self.click_times = []
         self.error_indices = []
         self.trial_results = []
-        self.stim_click_times = []
         self.session_start_time = None
         self.start_time = None
         self.session_active = False
         self.participant_name = ""
+        self.nurse_clicks = []
 
         self.mode = "click"
         self.timer_duration = 3
@@ -107,10 +107,16 @@ class FamousFaceTest(QMainWindow):
         self.timer.timeout.connect(self.handle_timeout)
 
         self.patient_window = PatientWindow()
-        self.patient_window.show()
-
         self.waiting_screen = WaitingScreen()
         self.init_ui()
+        self.installEventFilter(self)
+        self.patient_window.show()
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Type.MouseButtonPress and self.session_active:
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            self.nurse_clicks.append({"evenement": "clic_infirmiere", "horodatage": now})
+        return super().eventFilter(obj, event)
 
     def toggle_timer_input(self):
         self.timer_input.setVisible(self.mode_selector.currentText() == "Temps imparti")
@@ -161,17 +167,27 @@ class FamousFaceTest(QMainWindow):
         self.central_widget.setLayout(self.main_layout)
 
     def prepare_test(self):
-        self.participant_name = f"{self.prenom_input.text().strip()} {self.nom_input.text().strip()}"
-        self.stim_contact = self.contact_input.text().strip()
-        self.stim_intensite = self.intensite_input.text().strip()
-        self.stim_duree = self.duree_input.text().strip()
+        prenom = self.prenom_input.text().strip()
+        nom = self.nom_input.text().strip()
+        contact = self.contact_input.text().strip()
+        intensite = self.intensite_input.text().strip()
+        duree = self.duree_input.text().strip()
+
+        if not all([prenom, nom, contact, intensite, duree]):
+            QMessageBox.warning(self, "Erreur", "Veuillez remplir tous les champs.")
+            return
+
+        self.participant_name = f"{prenom} {nom}"
+        self.stim_contact = contact
+        self.stim_intensite = intensite
+        self.stim_duree = duree
 
         mode_text = self.mode_selector.currentText()
         self.mode = "timer" if mode_text == "Temps imparti" else "click" if mode_text == "Image au clic" else "space"
-        self.space_mode = self.mode == \"space\"
+        self.space_mode = self.mode == "space"
 
         try:
-            self.timer_duration = int(self.timer_input.text()) if self.mode == \"timer\" else 0
+            self.timer_duration = int(self.timer_input.text()) if self.mode == "timer" else 0
         except ValueError:
             self.timer_duration = 3
 
@@ -187,7 +203,7 @@ class FamousFaceTest(QMainWindow):
             self.click_times = []
             self.error_indices = []
             self.trial_results = []
-            self.stim_click_times = []
+            self.nurse_clicks = []
             self.current_triplets = self.all_triplets[:]
             random.shuffle(self.current_triplets)
             self.session_start_time = time.time()
@@ -207,6 +223,9 @@ class FamousFaceTest(QMainWindow):
             return
 
         images = self.current_triplets[self.current_index]
+        prefix = images[0].rsplit("_", 1)[0] + "_"
+        self.current_triplet_name = self.triplet_name_map.get(prefix, "Inconnu")
+
         famous_img = next((img for img in images if "_0." in img), None)
         if not famous_img:
             QMessageBox.critical(self, "Erreur", "Impossible de trouver l'image _0 pour ce triplet.")
@@ -264,10 +283,10 @@ class FamousFaceTest(QMainWindow):
             "correct": is_famous,
             "temps_reponse": reaction_time,
             "horodatage_stimulation": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "nom_triplet": self.triplet_names[self.current_index],
+            "triplet_nom": self.current_triplet_name,
             "participant": self.participant_name,
             "mode": self.mode,
-            "contact": self.stim_contact
+            "contact_stimulation": self.stim_contact
         })
 
         for i, label in enumerate(self.experimenter_labels):
@@ -293,10 +312,10 @@ class FamousFaceTest(QMainWindow):
             "correct": False,
             "temps_reponse": self.timer_duration,
             "horodatage_stimulation": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "nom_triplet": self.triplet_names[self.current_index],
+            "triplet_nom": self.current_triplet_name,
             "participant": self.participant_name,
             "mode": self.mode,
-            "contact": self.stim_contact
+            "contact_stimulation": self.stim_contact
         })
 
         self.current_index += 1
@@ -310,22 +329,8 @@ class FamousFaceTest(QMainWindow):
         self.patient_window.hide()
 
         df_trials = pd.DataFrame(self.trial_results)
-        for t in self.stim_click_times:
-            df_trials = pd.concat([
-                df_trials,
-                pd.DataFrame([{
-                    "id_essai": "stim_click",
-                    "temps_total_depuis_debut": t,
-                    "image_choisie": "",
-                    "correct": "",
-                    "temps_reponse": "",
-                    "horodatage_stimulation": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "nom_triplet": "",
-                    "participant": self.participant_name,
-                    "mode": self.mode,
-                    "contact": self.stim_contact
-                }])
-            ], ignore_index=True)
+        df_clicks = pd.DataFrame(self.nurse_clicks)
+        full_df = pd.concat([df_trials, df_clicks], ignore_index=True)
 
         now = datetime.now()
         timestamp = now.strftime("%Y_%m_%d_%H%M")
@@ -333,16 +338,10 @@ class FamousFaceTest(QMainWindow):
         nom_fichier = f"{prenom_nom}_{timestamp}_{self.stim_contact}-{self.stim_intensite}-{self.stim_duree}_{self.test_name}.xlsx"
 
         try:
-            df_trials.to_excel(nom_fichier, index=False, engine='openpyxl')
+            full_df.to_excel(nom_fichier, index=False, engine='openpyxl')
             QMessageBox.information(self, "Fin", f"Test terminé. Résultats sauvegardés dans {nom_fichier}.")
         except PermissionError:
             QMessageBox.critical(self, "Erreur", "Le fichier Excel est ouvert. Fermez-le puis relancez.")
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton and self.session_active:
-            now = time.time()
-            self.stim_click_times.append(round(now - self.session_start_time, 3))
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
