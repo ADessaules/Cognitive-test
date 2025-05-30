@@ -161,7 +161,7 @@ class FamousFaceTest(QMainWindow):
         self.central_widget.setLayout(self.main_layout)
 
     def prepare_test(self):
-        self.participant_name = f\"{self.prenom_input.text().strip()} {self.nom_input.text().strip()}\"
+        self.participant_name = f"{self.prenom_input.text().strip()} {self.nom_input.text().strip()}"
         self.stim_contact = self.contact_input.text().strip()
         self.stim_intensite = self.intensite_input.text().strip()
         self.stim_duree = self.duree_input.text().strip()
