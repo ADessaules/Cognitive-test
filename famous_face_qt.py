@@ -1,10 +1,8 @@
 import sys
 import os
 import random
-import uuid
 import time
 from datetime import datetime
-from pathlib import Path
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QPushButton,
     QVBoxLayout, QHBoxLayout, QLineEdit, QMessageBox, QComboBox
@@ -13,8 +11,6 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import QTimer, Qt
 import pandas as pd
 
-from PyQt6.QtCore import QEvent
-from PyQt6.QtGui import QMouseEvent
 
 class WaitingScreen(QWidget):
     def __init__(self):
@@ -26,6 +22,7 @@ class WaitingScreen(QWidget):
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(label)
         self.setLayout(layout)
+
 
 class PatientWindow(QWidget):
     def __init__(self):
@@ -164,6 +161,22 @@ class FamousFaceTest(QMainWindow):
         self.central_widget.setLayout(self.main_layout)
 
     def prepare_test(self):
+        self.participant_name = f\"{self.prenom_input.text().strip()} {self.nom_input.text().strip()}\"
+        self.stim_contact = self.contact_input.text().strip()
+        self.stim_intensite = self.intensite_input.text().strip()
+        self.stim_duree = self.duree_input.text().strip()
+
+        mode_text = self.mode_selector.currentText()
+        self.mode = \"timer\" if mode_text == \"Temps imparti\" else \"click\" if mode_text == \"Image au clic\" else \"space\"
+        self.space_mode = self.mode == \"space\"
+
+        try:
+            self.timer_duration = int(self.timer_input.text()) if self.mode == \"timer\" else 0
+        except ValueError:
+            self.timer_duration = 3
+
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setFocus()
         self.waiting_screen.show()
 
     def keyReleaseEvent(self, event):
@@ -265,6 +278,30 @@ class FamousFaceTest(QMainWindow):
         self.current_index += 1
         QTimer.singleShot(500, self.show_triplet)
 
+    def handle_timeout(self):
+        self.timer.stop()
+        now = time.time()
+        elapsed_since_start = round(now - self.session_start_time, 3)
+
+        self.click_times.append(self.timer_duration)
+        self.error_indices.append(self.current_index)
+
+        self.trial_results.append({
+            "id_essai": self.current_index + 1,
+            "temps_total_depuis_debut": elapsed_since_start,
+            "image_choisie": "aucune",
+            "correct": False,
+            "temps_reponse": self.timer_duration,
+            "horodatage_stimulation": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "nom_triplet": self.triplet_names[self.current_index],
+            "participant": self.participant_name,
+            "mode": self.mode,
+            "contact": self.stim_contact
+        })
+
+        self.current_index += 1
+        self.show_triplet()
+
     def end_session(self):
         if not self.session_active:
             return
@@ -274,18 +311,21 @@ class FamousFaceTest(QMainWindow):
 
         df_trials = pd.DataFrame(self.trial_results)
         for t in self.stim_click_times:
-            df_trials = pd.concat([df_trials, pd.DataFrame([{ "id_essai": "stim", "temps_total_depuis_debut": t }])], ignore_index=True)
-
-        summary = {
-            "id_essai": "TOTAL",
-            "temps_total_depuis_debut": "",
-            "image_choisie": "",
-            "correct": f"{len(df_trials[df_trials['correct'] == True])} / {len(df_trials[df_trials['id_essai'] != 'stim'])}",
-            "temps_reponse": round(df_trials['temps_reponse'].mean(), 3) if not df_trials.empty else "NA",
-            "horodatage_stimulation": ""
-        }
-
-        df_trials = pd.concat([df_trials, pd.DataFrame([summary])], ignore_index=True)
+            df_trials = pd.concat([
+                df_trials,
+                pd.DataFrame([{
+                    "id_essai": "stim_click",
+                    "temps_total_depuis_debut": t,
+                    "image_choisie": "",
+                    "correct": "",
+                    "temps_reponse": "",
+                    "horodatage_stimulation": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "nom_triplet": "",
+                    "participant": self.participant_name,
+                    "mode": self.mode,
+                    "contact": self.stim_contact
+                }])
+            ], ignore_index=True)
 
         now = datetime.now()
         timestamp = now.strftime("%Y_%m_%d_%H%M")
@@ -299,10 +339,10 @@ class FamousFaceTest(QMainWindow):
             QMessageBox.critical(self, "Erreur", "Le fichier Excel est ouvert. Fermez-le puis relancez.")
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            if self.session_active:
-                now = time.time()
-                self.stim_click_times.append(round(now - self.session_start_time, 3))
+        if event.button() == Qt.MouseButton.LeftButton and self.session_active:
+            now = time.time()
+            self.stim_click_times.append(round(now - self.session_start_time, 3))
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
