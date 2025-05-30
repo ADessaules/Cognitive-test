@@ -167,7 +167,7 @@ class FamousFaceTest(QMainWindow):
         self.stim_duree = self.duree_input.text().strip()
 
         mode_text = self.mode_selector.currentText()
-        self.mode = \"timer\" if mode_text == \"Temps imparti\" else \"click\" if mode_text == \"Image au clic\" else \"space\"
+        self.mode = "timer" if mode_text == "Temps imparti" else "click" if mode_text == "Image au clic" else "space"
         self.space_mode = self.mode == \"space\"
 
         try:
