@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QPushButton, QLabel, QVBoxLayout, QHBoxLayout, QDialog, QGridLayout
+from PyQt6.QtWidgets import QPushButton, QLabel, QVBoxLayout, QHBoxLayout, QDialog, QGridLayout, QScrollArea, QWidget
 from PyQt6.QtGui import QPixmap
 import sqlite3
 import os
@@ -51,7 +51,12 @@ class DetailsPatient(QDialog):
         celebrites = cursor.fetchall()
         conn.close()
 
-        grid = QGridLayout()
+        # Scroll Area
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll_content = QWidget()
+        grid = QGridLayout(scroll_content)
+
         row, col = 0, 0
         for nom, image_path in celebrites:
             label = QLabel(nom)
@@ -65,7 +70,9 @@ class DetailsPatient(QDialog):
             if col >= 3:
                 col = 0
                 row += 2
-        self.contenu.addLayout(grid)
+
+        scroll.setWidget(scroll_content)
+        self.contenu.addWidget(scroll)
 
         btn_revoir_selection = QPushButton("Modifier la Sélection")
         btn_revoir_selection.setStyleSheet("font-size: 16px; padding: 5px; background-color: orange; color: white;")
@@ -76,10 +83,7 @@ class DetailsPatient(QDialog):
         self.selection_fenetre = SelectionCelebrites(self.patient_id)
         self.selection_fenetre.show()
 
-
-
     def afficher_bisection(self):
-        # Fenêtre de test
         self.clear_contenu()
 
         conn = sqlite3.connect(DB_FILE)
@@ -96,7 +100,6 @@ class DetailsPatient(QDialog):
             self.contenu.addWidget(QLabel("Aucun test de bisection enregistré pour ce patient."))
             return
 
-        # Affichage des résultats
         resultats_text = ""
         dpi = self.logicalDpiX()
         pixels_per_cm = dpi / 2.54
@@ -113,7 +116,6 @@ class DetailsPatient(QDialog):
         label.setStyleSheet("font-size: 16px;")
         self.contenu.addWidget(label)
 
-        # Bouton pour relancer/revoir le test
         btn_rejouer = QPushButton("Revoir ou Continuer le Test")
         btn_rejouer.setStyleSheet("font-size: 16px; padding: 5px; background-color: #007BFF; color: white;")
         btn_rejouer.clicked.connect(self.relancer_bisection)
