@@ -132,7 +132,7 @@ class FamousFaceTest(QMainWindow):
         self.load_patients_from_db()
         self.config_layout.addWidget(QLabel("Choisir un patient :"))
         self.config_layout.addWidget(self.patient_selector)
-        self.contact_input = QLineEdit()
+                self.contact_input = QLineEdit()
         self.contact_input.setPlaceholderText("Contacts de stimulation")
         self.intensite_input = QLineEdit()
         self.intensite_input.setPlaceholderText("Intensité (mA)")
@@ -377,6 +377,29 @@ def prepare_test(self):
         self.current_index += 1
         self.show_triplet()
 
+
+    def handle_timeout(self):
+        self.timer.stop()
+        now = time.time()
+        elapsed = round(now - self.session_start_time, 3)
+
+        self.click_times.append(self.timer_duration)
+        self.error_indices.append(self.current_index)
+
+        self.trial_results.append({
+            "id_essai": self.current_index + 1,
+            "temps_total_depuis_debut": elapsed,
+            "image_choisie": "aucune",
+            "correct": False,
+            "temps_reponse": self.timer_duration,
+            "horodatage_stimulation": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "participant": self.participant_name,
+            "mode": self.mode,
+            "contact_stimulation": self.stim_contact
+        })
+
+        self.current_index += 1
+        self.show_triplet()
     def end_session(self):
         if not self.session_active:
             return
