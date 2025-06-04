@@ -15,9 +15,17 @@ class SelectionCelebrites(QDialog):
         self.patient_id = patient_id
         self.selections = {}
 
-        # Chargement des célébrités
+        extensions = ["*.jpg", "*.jpeg", "*.png"]
+        fichiers = []
+        for ext in extensions:
+            fichiers.extend(glob.glob(os.path.join(DOSSIER_IMAGES, ext)))
+
+        # Ne garder que ceux qui se terminent par "_0" avant l'extension
+        fichiers_filtres = [f for f in fichiers if os.path.splitext(f)[0].endswith("_0")]
+
         self.celebrites = [{"nom": os.path.splitext(os.path.basename(f))[0].replace("_", " "), "image": f}
-                           for f in glob.glob(os.path.join(DOSSIER_IMAGES, "*.webp"))]
+                           for f in fichiers_filtres]
+
 
         self.layout = QVBoxLayout()
 
