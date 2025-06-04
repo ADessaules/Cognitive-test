@@ -132,7 +132,7 @@ class FamousFaceTest(QMainWindow):
         self.load_patients_from_db()
         self.config_layout.addWidget(QLabel("Choisir un patient :"))
         self.config_layout.addWidget(self.patient_selector)
-                self.contact_input = QLineEdit()
+        self.contact_input = QLineEdit()
         self.contact_input.setPlaceholderText("Contacts de stimulation")
         self.intensite_input = QLineEdit()
         self.intensite_input.setPlaceholderText("Intensité (mA)")
