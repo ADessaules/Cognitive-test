@@ -87,22 +87,7 @@ class FamousFaceTest(QMainWindow):
             ])
         }
 
-        self.current_index = 0
-        self.click_times = []
-        self.error_indices = []
-        self.trial_results = []
-        self.session_start_time = None
-        self.start_time = None
-        self.session_active = False
-        self.participant_name = ""
-        self.nurse_clicks = []
-
-        self.mode = "click"
-        self.timer_duration = 3
-        self.space_mode = False
-        self.selected_index = None
-        self.experimenter_labels = []
-
+        self.init_test_state()
         self.timer = QTimer()
         self.timer.timeout.connect(self.handle_timeout)
 
@@ -111,6 +96,22 @@ class FamousFaceTest(QMainWindow):
         self.init_ui()
         self.installEventFilter(self)
         self.patient_window.show()
+
+    def init_test_state(self):
+        self.current_index = 0
+        self.click_times = []
+        self.error_indices = []
+        self.trial_results = []
+        self.nurse_clicks = []
+        self.session_start_time = None
+        self.start_time = None
+        self.session_active = False
+        self.participant_name = ""
+        self.mode = "click"
+        self.timer_duration = 3
+        self.space_mode = False
+        self.selected_index = None
+        self.experimenter_labels = []
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Type.MouseButtonPress and self.session_active:
@@ -177,6 +178,7 @@ class FamousFaceTest(QMainWindow):
             QMessageBox.warning(self, "Erreur", "Veuillez remplir tous les champs.")
             return
 
+        self.init_test_state()
         self.participant_name = f"{prenom} {nom}"
         self.stim_contact = contact
         self.stim_intensite = intensite
@@ -194,6 +196,7 @@ class FamousFaceTest(QMainWindow):
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setFocus()
         self.waiting_screen.show()
+        self.patient_window.show()
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key.Key_Space and not self.session_active and self.waiting_screen.isVisible():
