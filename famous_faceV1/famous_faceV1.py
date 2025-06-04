@@ -12,7 +12,7 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import QTimer, Qt, QEvent
 import pandas as pd
 
-DB_FILE = os.path.join("Paul", "patients.db")
+DB_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "Paul", "patients.db"))
 IMAGE_FOLDER = os.path.join("famous_faceV1", "image_famous_faceV1")
 
 class WaitingScreen(QWidget):
