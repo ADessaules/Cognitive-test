@@ -378,7 +378,7 @@ def prepare_test(self):
         self.show_triplet()
 
 
-    def handle_timeout(self):
+    def
         self.timer.stop()
         now = time.time()
         elapsed = round(now - self.session_start_time, 3)
