@@ -2,17 +2,15 @@ import sys
 import os
 import random
 import time
-import sqlite3
 from datetime import datetime
+from pathlib import Path
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QPushButton,
-    QVBoxLayout, QHBoxLayout, QComboBox, QLineEdit, QMessageBox
+    QVBoxLayout, QHBoxLayout, QLineEdit, QMessageBox, QComboBox
 )
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import QTimer, Qt, QEvent
 import pandas as pd
-
-DB_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "Paul", "patients.db"))
 
 class WaitingScreen(QWidget):
     def __init__(self):
@@ -52,23 +50,77 @@ class FamousFaceTest(QMainWindow):
         self.setWindowTitle("Famous Face Test - Expérimentateur")
         self.setGeometry(100, 100, 1200, 600)
 
-        self.patient_window = PatientWindow()
-        self.waiting_screen = WaitingScreen()
+        self.image_folder = "image_famous_faceV1"
+        self.test_name = "famous_face"
+
+        all_images = [img for img in os.listdir(self.image_folder) if img.lower().endswith((".png", ".jpg", ".jpeg"))]
+        triplet_dict = {}
+        for img in all_images:
+            try:
+                prefix = img.split("_")[1]
+                if prefix not in triplet_dict:
+                    triplet_dict[prefix] = []
+                triplet_dict[prefix].append(img)
+            except IndexError:
+                continue
+
+        self.all_triplets = [
+            sorted(images, key=lambda name: int(name.split("_")[2].split(".")[0]))
+            for _, images in sorted(triplet_dict.items(), key=lambda item: int(item[0]))
+            if len(images) == 3
+        ]
+
+        random.shuffle(self.all_triplets)
+        self.current_triplets = self.all_triplets[:]
+
+        self.triplet_name_map = {
+            f"image_{i+1}_": name for i, name in enumerate([
+                "Sophie Marceau", "Tom cruise", "François Hollande", "Brad Pitt", "Patrick Sébastien",
+                "Angela Merkel", "Zinédine Zidane", "Georges Bush", "Léonardo Dicaprio", "Nicolas Sarkozy",
+                "Marine Le Pen", "Patrick Bruel", "Nagui", "Ségolène Royal", "Jacques Chirac", "Michel Drucker",
+                "Jean Reno", "Michel Sardou", "Vladimir Poutine", "Patrick Poivre d’Arvor", "Le Prince Charles",
+                "Jean-Jacques Goldman", "Georges Clooney", "Arnold Schwarzenegger", "Gérard Depardieu", "Manuel Valls",
+                "Florent Pagny", "Arthur", "François Mitterand", "Johnny Hallyday", "Gad Elmaleh", "Mimie Mathy",
+                "Alain Delon", "Renaud", "Jean Dujardin", "Dany Boon", "Vanessa Paradis", "Bill Clinton", "Garou",
+                "Muriel Robin", "Laurent Ruquier", "Claire Chazal", "Serge Gainsbourg", "Céline Dion", "Guy Bedos",
+                "Bernard Tapie", "Dominique  Strauss Kahn", "Fabrice Luchini", "Charles Aznavour", "Jack Nicholson"
+            ])
+        }
+
+        self.init_test_state()
         self.timer = QTimer()
         self.timer.timeout.connect(self.handle_timeout)
 
-        self.session_active = False
+        self.patient_window = PatientWindow()
+        self.waiting_screen = WaitingScreen()
+        self.init_ui()
+        self.installEventFilter(self)
+        self.patient_window.show()
+
+    def init_test_state(self):
+        self.current_index = 0
         self.click_times = []
         self.error_indices = []
         self.trial_results = []
         self.nurse_clicks = []
+        self.session_start_time = None
+        self.start_time = None
+        self.session_active = False
+        self.participant_name = ""
+        self.mode = "click"
+        self.timer_duration = 3
+        self.space_mode = False
         self.selected_index = None
-        self.current_index = 0
         self.experimenter_labels = []
 
-        self.init_ui()
-        self.installEventFilter(self)
-        self.patient_window.show()
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Type.MouseButtonPress and self.session_active:
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            self.nurse_clicks.append({"evenement": "clic_infirmiere", "horodatage": now})
+        return super().eventFilter(obj, event)
+
+    def toggle_timer_input(self):
+        self.timer_input.setVisible(self.mode_selector.currentText() == "Temps imparti")
 
     def init_ui(self):
         self.central_widget = QWidget()
@@ -76,14 +128,11 @@ class FamousFaceTest(QMainWindow):
         self.main_layout = QHBoxLayout()
 
         self.config_layout = QVBoxLayout()
-
-        # MENU DÉROULANT À LA PLACE DE NOM/PRÉNOM
         self.patient_selector = QComboBox()
-        self.patient_map = self.load_patients()
+        self.load_patients_from_db()
         self.config_layout.addWidget(QLabel("Choisir un patient :"))
         self.config_layout.addWidget(self.patient_selector)
-
-        self.contact_input = QLineEdit()
+                self.contact_input = QLineEdit()
         self.contact_input.setPlaceholderText("Contacts de stimulation")
         self.intensite_input = QLineEdit()
         self.intensite_input.setPlaceholderText("Intensité (mA)")
@@ -105,9 +154,8 @@ class FamousFaceTest(QMainWindow):
         self.stop_btn = QPushButton("Arrêter et sauvegarder")
         self.stop_btn.clicked.connect(self.end_session)
 
-        for widget in [self.contact_input, self.intensite_input, self.duree_input,
-                       self.mode_label, self.mode_selector, self.timer_input,
-                       self.start_btn, self.stop_btn]:
+        for widget in [self.prenom_input, self.nom_input, self.contact_input, self.intensite_input, self.duree_input,
+                       self.mode_label, self.mode_selector, self.timer_input, self.start_btn, self.stop_btn]:
             self.config_layout.addWidget(widget)
 
         self.image_layout = QHBoxLayout()
@@ -116,30 +164,78 @@ class FamousFaceTest(QMainWindow):
 
         self.main_layout.addLayout(self.config_layout)
         self.main_layout.addWidget(self.image_panel)
+
         self.central_widget.setLayout(self.main_layout)
 
-    def load_patients(self):
-        conn = sqlite3.connect(DB_FILE)
-        cursor = conn.cursor()
-        cursor.execute("SELECT DISTINCT p.id, p.nom FROM patients p JOIN selections s ON p.id = s.patient_id")
-        patients = cursor.fetchall()
-        conn.close()
-        patient_map = {}
-        for pid, nom in patients:
-            self.patient_selector.addItem(nom)
-            patient_map[nom] = pid
-        return patient_map
+    
+def load_patients_from_db(self):
+    conn = sqlite3.connect(self.DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT DISTINCT p.id, p.nom FROM patients p JOIN selections s ON p.id = s.patient_id")
+    self.patients = cursor.fetchall()
+    conn.close()
+    self.patient_id_map = {}
+    for pid, nom in self.patients:
+        self.patient_selector.addItem(nom)
+        self.patient_id_map[nom] = pid
 
-    def toggle_timer_input(self):
-        self.timer_input.setVisible(self.mode_selector.currentText() == "Temps imparti")
+def prepare_test(self):
+    selected_nom = self.patient_selector.currentText()
+    self.patient_id = self.patient_id_map[selected_nom]
+    self.participant_name = selected_nom
+    self.stim_contact = self.contact_input.text().strip()
+    self.stim_intensite = self.intensite_input.text().strip()
+    self.stim_duree = self.duree_input.text().strip()
 
-    def prepare_test(self):
-        selected_nom = self.patient_selector.currentText()
-        self.patient_id = self.patient_map[selected_nom]
-        self.participant_name = selected_nom
-        self.contact = self.contact_input.text().strip()
-        self.intensite = self.intensite_input.text().strip()
-        self.duree = self.duree_input.text().strip()
+    mode_text = self.mode_selector.currentText()
+    self.mode = "timer" if mode_text == "Temps imparti" else "click" if mode_text == "Image au clic" else "space"
+    self.space_mode = self.mode == "space"
+
+    try:
+        self.timer_duration = int(self.timer_input.text()) if self.mode == "timer" else 0
+    except ValueError:
+        self.timer_duration = 3
+
+    conn = sqlite3.connect(self.DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT image FROM selections WHERE patient_id = ?", (self.patient_id,))
+    selected_images = [os.path.basename(row[0]) for row in cursor.fetchall()]
+    conn.close()
+
+    selected_prefixes = set(img.split("_")[1] for img in selected_images if "_0." in img)
+
+    self.current_triplets = [
+        triplet for triplet in self.all_triplets
+        if any("image_" + prefix + "_0" in img for prefix in selected_prefixes for img in triplet)
+    ]
+
+    if not self.current_triplets:
+        QMessageBox.warning(self, "Erreur", "Aucun triplet sélectionné pour ce patient.")
+        return
+
+    self.init_test_state()
+    self.session_start_time = time.time()
+    self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+    self.setFocus()
+    self.waiting_screen.show()
+    self.patient_window.show()
+
+    def prepare_test(self):  # ancienne version remplacée
+        prenom = self.prenom_input.text().strip()
+        nom = self.nom_input.text().strip()
+        contact = self.contact_input.text().strip()
+        intensite = self.intensite_input.text().strip()
+        duree = self.duree_input.text().strip()
+
+        if not all([prenom, nom, contact, intensite, duree]):
+            QMessageBox.warning(self, "Erreur", "Veuillez remplir tous les champs.")
+            return
+
+        self.init_test_state()
+        self.participant_name = f"{prenom} {nom}"
+        self.stim_contact = contact
+        self.stim_intensite = intensite
+        self.stim_duree = duree
 
         mode_text = self.mode_selector.currentText()
         self.mode = "timer" if mode_text == "Temps imparti" else "click" if mode_text == "Image au clic" else "space"
@@ -150,40 +246,24 @@ class FamousFaceTest(QMainWindow):
         except ValueError:
             self.timer_duration = 3
 
-        conn = sqlite3.connect(DB_FILE)
-        cursor = conn.cursor()
-        cursor.execute("SELECT image FROM selections WHERE patient_id = ?", (self.patient_id,))
-        images = [row[0] for row in cursor.fetchall()]
-        conn.close()
-
-        # Regrouper les images en triplets basés sur le nom "image_XX_*.jpg"
-        triplet_map = {}
-        for img_path in images:
-            base = os.path.basename(img_path)
-            try:
-                prefix = base.split("_")[1]
-                triplet_map.setdefault(prefix, []).append(img_path)
-            except IndexError:
-                continue
-
-        self.current_triplets = [v for v in triplet_map.values() if len(v) == 3]
-        random.shuffle(self.current_triplets)
-
-        if not self.current_triplets:
-            QMessageBox.warning(self, "Erreur", "Aucun triplet sélectionné pour ce patient.")
-            return
-
-        self.session_active = True
-        self.session_start_time = time.time()
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setFocus()
         self.waiting_screen.show()
         self.patient_window.show()
-        self.show_triplet()
 
-    def eventFilter(self, obj, event):
-        if event.type() == QEvent.Type.MouseButtonPress and self.session_active:
-            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            self.nurse_clicks.append({"evenement": "clic_infirmiere", "horodatage": now})
-        return super().eventFilter(obj, event)
+    def keyReleaseEvent(self, event):
+        if event.key() == Qt.Key.Key_Space and not self.session_active and self.waiting_screen.isVisible():
+            self.waiting_screen.hide()
+            self.session_active = True
+            self.current_index = 0
+            self.click_times = []
+            self.error_indices = []
+            self.trial_results = []
+            self.nurse_clicks = []
+            self.current_triplets = self.all_triplets[:]
+            random.shuffle(self.current_triplets)
+            self.session_start_time = time.time()
+            self.show_triplet()
 
     def show_triplet(self):
         for layout in (self.image_layout, self.patient_window.image_layout):
@@ -199,10 +279,12 @@ class FamousFaceTest(QMainWindow):
             return
 
         images = self.current_triplets[self.current_index]
+        prefix = images[0].rsplit("_", 1)[0] + "_"
+        self.current_triplet_name = self.triplet_name_map.get(prefix, "Inconnu")
+
         famous_img = next((img for img in images if "_0." in img), None)
         if not famous_img:
-            self.current_index += 1
-            self.show_triplet()
+            QMessageBox.critical(self, "Erreur", "Impossible de trouver l'image _0 pour ce triplet.")
             return
 
         shuffled = images[:]
@@ -211,8 +293,10 @@ class FamousFaceTest(QMainWindow):
         self.selected_index = None
         self.start_time = time.time()
 
-        for idx, (img_path, is_famous) in enumerate(zip(shuffled, self.flags)):
+        for idx, (img_name, is_famous) in enumerate(zip(shuffled, self.flags)):
+            img_path = os.path.join(self.image_folder, img_name)
             pixmap = QPixmap(img_path).scaled(200, 200, Qt.AspectRatioMode.KeepAspectRatio)
+
             label_patient = QLabel()
             label_patient.setPixmap(pixmap)
             label_patient.mousePressEvent = self.make_click_handler(is_famous, idx)
@@ -224,6 +308,9 @@ class FamousFaceTest(QMainWindow):
             self.image_layout.addWidget(label_mirror)
             self.experimenter_labels.append(label_mirror)
 
+        if self.mode == "timer":
+            self.timer.start(self.timer_duration * 1000)
+
     def make_click_handler(self, is_famous, index):
         def handler(event):
             self.selected_index = index
@@ -233,12 +320,13 @@ class FamousFaceTest(QMainWindow):
     def handle_click(self, is_famous):
         if not self.session_active:
             return
+
         if self.timer.isActive():
             self.timer.stop()
 
         now = time.time()
         reaction_time = round(now - self.start_time, 3)
-        elapsed = round(now - self.session_start_time, 3)
+        elapsed_since_start = round(now - self.session_start_time, 3)
 
         self.click_times.append(reaction_time)
         if not is_famous:
@@ -246,14 +334,15 @@ class FamousFaceTest(QMainWindow):
 
         self.trial_results.append({
             "id_essai": self.current_index + 1,
-            "temps_total_depuis_debut": elapsed,
+            "temps_total_depuis_debut": elapsed_since_start,
             "image_choisie": "famous" if is_famous else "distracteur",
             "correct": is_famous,
             "temps_reponse": reaction_time,
             "horodatage_stimulation": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "triplet_nom": self.current_triplet_name,
             "participant": self.participant_name,
             "mode": self.mode,
-            "contact_stimulation": self.contact
+            "contact_stimulation": self.stim_contact
         })
 
         for i, label in enumerate(self.experimenter_labels):
@@ -267,21 +356,22 @@ class FamousFaceTest(QMainWindow):
     def handle_timeout(self):
         self.timer.stop()
         now = time.time()
-        elapsed = round(now - self.session_start_time, 3)
+        elapsed_since_start = round(now - self.session_start_time, 3)
 
         self.click_times.append(self.timer_duration)
         self.error_indices.append(self.current_index)
 
         self.trial_results.append({
             "id_essai": self.current_index + 1,
-            "temps_total_depuis_debut": elapsed,
+            "temps_total_depuis_debut": elapsed_since_start,
             "image_choisie": "aucune",
             "correct": False,
             "temps_reponse": self.timer_duration,
             "horodatage_stimulation": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "triplet_nom": self.current_triplet_name,
             "participant": self.participant_name,
             "mode": self.mode,
-            "contact_stimulation": self.contact
+            "contact_stimulation": self.stim_contact
         })
 
         self.current_index += 1
@@ -300,13 +390,14 @@ class FamousFaceTest(QMainWindow):
 
         now = datetime.now()
         timestamp = now.strftime("%Y_%m_%d_%H%M")
-        nom_fichier = f"{self.participant_name}_{timestamp}_famous_face.xlsx"
+        prenom_nom = self.participant_name.replace(" ", "").lower()
+        nom_fichier = f"{prenom_nom}_{timestamp}_{self.stim_contact}-{self.stim_intensite}-{self.stim_duree}_{self.test_name}.xlsx"
 
         try:
             full_df.to_excel(nom_fichier, index=False, engine='openpyxl')
             QMessageBox.information(self, "Fin", f"Test terminé. Résultats sauvegardés dans {nom_fichier}.")
         except PermissionError:
-            QMessageBox.critical(self, "Erreur", "Fichier Excel ouvert. Fermez-le et réessayez.")
+            QMessageBox.critical(self, "Erreur", "Le fichier Excel est ouvert. Fermez-le puis relancez.")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
