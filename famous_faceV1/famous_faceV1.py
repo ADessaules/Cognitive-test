@@ -92,11 +92,16 @@ class FamousFaceTest(QMainWindow):
             if len(images) == 3
         }
 
-        self.paul_dir = Path("Paul")
+        from pathlib import Path
+        self.paul_dir = Path(__file__).resolve().parent.parent / "Paul"
         self.patient_selector = QComboBox()
-        self.patient_selector.addItems([f.stem for f in self.paul_dir.glob("*.py")])
+        self.patient_selector.addItem("-- Aucun --")
+        for f in self.paul_dir.glob("*.py"):
+            if f.stem not in ("__init__", "__pycache__"):
+                self.patient_selector.addItem(f.stem)
         self.patient_selector.currentTextChanged.connect(self.load_patient_selection)
         self.selected_triplets = []
+        self.selection_loaded = False
 
         self.init_test_state()
         self.timer = QTimer()
@@ -181,8 +186,18 @@ class FamousFaceTest(QMainWindow):
         self.central_widget.setLayout(self.main_layout)
         
     def load_patient_selection(self, patient_name):
+        if patient_name == "-- Aucun --":
+            self.selected_triplets = []
+            self.selection_loaded = False
+            return
+
+        module_path = self.paul_dir / f"{patient_name}.py"
+        if not module_path.exists():
+            self.selected_triplets = []
+            self.selection_loaded = False
+            return
+
         try:
-            module_path = self.paul_dir / f"{patient_name}.py"
             import importlib.util
             spec = importlib.util.spec_from_file_location("details", module_path)
             module = importlib.util.module_from_spec(spec)
@@ -190,12 +205,15 @@ class FamousFaceTest(QMainWindow):
             if hasattr(module, "details"):
                 selections = module.details.get("Sélections", [])
                 self.selected_triplets = [self.triplet_map_by_index[img] for img in selections if img in self.triplet_map_by_index]
+                self.selection_loaded = True if self.selected_triplets else False
             else:
                 self.selected_triplets = []
+                self.selection_loaded = False
         except Exception as e:
-            print(f"Erreur lors du chargement de {patient_name} : {e}")
+            print(f"Erreur chargement patient {patient_name} :", e)
             self.selected_triplets = []
-
+            self.selection_loaded = False
+            
     def prepare_test(self):
         prenom = self.prenom_input.text().strip()
         nom = self.nom_input.text().strip()
@@ -222,9 +240,12 @@ class FamousFaceTest(QMainWindow):
         except ValueError:
             self.timer_duration = 3
 
-        if self.selected_triplets:
+        if self.selection_loaded:
             self.current_triplets = self.selected_triplets[:]
         else:
+            if self.patient_selector.currentText() != "-- Aucun --":
+                QMessageBox.warning(self, "Pas de sélection", "Ce patient n'a pas encore effectué de sélection. Veuillez retourner à la présélection.")
+                return
             self.current_triplets = self.all_triplets[:]
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setFocus()
