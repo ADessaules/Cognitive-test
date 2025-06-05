@@ -192,33 +192,28 @@ class FamousFaceTest(QMainWindow):
             self.selection_loaded = False
             return
     
-        db_path = Path(__file__).resolve().parent.parent / "Paul" / "patients.db"
-        if not db_path.exists():
-            QMessageBox.critical(self, "Erreur", f"Base de données introuvable : {db_path}")
-            self.selected_triplets = []
-            self.selection_loaded = False
-            return
-    
         try:
-            conn = sqlite3.connect(str(db_path))
+            db_path = Path(__file__).resolve().parent.parent / "Paul" / "patients.db"
+            conn = sqlite3.connect(db_path)
             cursor = conn.cursor()
+    
             cursor.execute("SELECT selection FROM patients WHERE nom = ?", (patient_name,))
             result = cursor.fetchone()
             conn.close()
     
             if result and result[0]:
-                raw_data = result[0].split(",")  # les noms d’image sont séparés par des virgules
-                images = [img.strip() for img in raw_data if img.strip()]
+                selections = result[0].split(",")
                 self.selected_triplets = [
-                    self.triplet_map_by_index[img] for img in images if img in self.triplet_map_by_index
+                    self.triplet_map_by_index[img]
+                    for img in selections
+                    if img in self.triplet_map_by_index
                 ]
                 self.selection_loaded = True if self.selected_triplets else False
             else:
                 self.selected_triplets = []
                 self.selection_loaded = False
-    
         except Exception as e:
-            print(f"Erreur lors du chargement de la sélection depuis la BDD :", e)
+            print(f"❌ Erreur chargement patient depuis BDD : {e}")
             self.selected_triplets = []
             self.selection_loaded = False
             
