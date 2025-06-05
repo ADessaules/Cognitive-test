@@ -191,7 +191,7 @@ class FamousFaceTest(QMainWindow):
             self.selection_loaded = False
             return
 
-        module_path = self.paul_dir / f"{patient_name}.py"
+        module_path = self.patients_dir / patient_name / "details_patient.py"
         if not module_path.exists():
             self.selected_triplets = []
             self.selection_loaded = False
