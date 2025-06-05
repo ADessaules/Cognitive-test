@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QLineEdit, QMessageBox, QComboBox
 )
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtCore import QTimer, Qt, QEvent
+from PyQt6.QtCore import QTimer, Qt
 import pandas as pd
 
 class WaitingScreen(QWidget):
@@ -70,9 +70,6 @@ class FamousFaceTest(QMainWindow):
             if len(images) == 3
         ]
 
-        random.shuffle(self.all_triplets)
-        self.current_triplets = self.all_triplets[:]
-
         self.triplet_name_map = {
             f"image_{i+1}_": name for i, name in enumerate([
                 "Sophie Marceau", "Tom cruise", "François Hollande", "Brad Pitt", "Patrick Sébastien",
@@ -87,15 +84,11 @@ class FamousFaceTest(QMainWindow):
             ])
         }
 
-        self.init_test_state()
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.handle_timeout)
-
-        self.patient_window = PatientWindow()
-        self.waiting_screen = WaitingScreen()
-        self.init_ui()
-        self.installEventFilter(self)
-        self.patient_window.show()
+        self.triplet_map_by_index = {
+            f"image_{int(prefix)}_0": sorted(images, key=lambda name: int(name.split("_")[2].split(".")[0]))
+            for prefix, images in triplet_dict.items()
+            if len(images) == 3
+        }
 
     def init_test_state(self):
         self.current_index = 0
