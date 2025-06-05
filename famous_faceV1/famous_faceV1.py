@@ -128,10 +128,10 @@ class FamousFaceTest(QMainWindow):
         self.main_layout = QHBoxLayout()
 
         self.config_layout = QVBoxLayout()
-        self.patient_selector = QComboBox()
-        self.load_patients_from_db()
-        self.config_layout.addWidget(QLabel("Choisir un patient :"))
-        self.config_layout.addWidget(self.patient_selector)
+        self.prenom_input = QLineEdit()
+        self.prenom_input.setPlaceholderText("Prénom")
+        self.nom_input = QLineEdit()
+        self.nom_input.setPlaceholderText("Nom")
         self.contact_input = QLineEdit()
         self.contact_input.setPlaceholderText("Contacts de stimulation")
         self.intensite_input = QLineEdit()
@@ -167,60 +167,7 @@ class FamousFaceTest(QMainWindow):
 
         self.central_widget.setLayout(self.main_layout)
 
-    
-def load_patients_from_db(self):
-    conn = sqlite3.connect(self.DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT DISTINCT p.id, p.nom FROM patients p JOIN selections s ON p.id = s.patient_id")
-    self.patients = cursor.fetchall()
-    conn.close()
-    self.patient_id_map = {}
-    for pid, nom in self.patients:
-        self.patient_selector.addItem(nom)
-        self.patient_id_map[nom] = pid
-
-def prepare_test(self):
-    selected_nom = self.patient_selector.currentText()
-    self.patient_id = self.patient_id_map[selected_nom]
-    self.participant_name = selected_nom
-    self.stim_contact = self.contact_input.text().strip()
-    self.stim_intensite = self.intensite_input.text().strip()
-    self.stim_duree = self.duree_input.text().strip()
-
-    mode_text = self.mode_selector.currentText()
-    self.mode = "timer" if mode_text == "Temps imparti" else "click" if mode_text == "Image au clic" else "space"
-    self.space_mode = self.mode == "space"
-
-    try:
-        self.timer_duration = int(self.timer_input.text()) if self.mode == "timer" else 0
-    except ValueError:
-        self.timer_duration = 3
-
-    conn = sqlite3.connect(self.DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT image FROM selections WHERE patient_id = ?", (self.patient_id,))
-    selected_images = [os.path.basename(row[0]) for row in cursor.fetchall()]
-    conn.close()
-
-    selected_prefixes = set(img.split("_")[1] for img in selected_images if "_0." in img)
-
-    self.current_triplets = [
-        triplet for triplet in self.all_triplets
-        if any("image_" + prefix + "_0" in img for prefix in selected_prefixes for img in triplet)
-    ]
-
-    if not self.current_triplets:
-        QMessageBox.warning(self, "Erreur", "Aucun triplet sélectionné pour ce patient.")
-        return
-
-    self.init_test_state()
-    self.session_start_time = time.time()
-    self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-    self.setFocus()
-    self.waiting_screen.show()
-    self.patient_window.show()
-
-    def prepare_test(self):  # ancienne version remplacée
+    def prepare_test(self):
         prenom = self.prenom_input.text().strip()
         nom = self.nom_input.text().strip()
         contact = self.contact_input.text().strip()
@@ -377,28 +324,6 @@ def prepare_test(self):
         self.current_index += 1
         self.show_triplet()
 
-
-        self.timer.stop()
-        now = time.time()
-        elapsed = round(now - self.session_start_time, 3)
-
-        self.click_times.append(self.timer_duration)
-        self.error_indices.append(self.current_index)
-
-        self.trial_results.append({
-            "id_essai": self.current_index + 1,
-            "temps_total_depuis_debut": elapsed,
-            "image_choisie": "aucune",
-            "correct": False,
-            "temps_reponse": self.timer_duration,
-            "horodatage_stimulation": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "participant": self.participant_name,
-            "mode": self.mode,
-            "contact_stimulation": self.stim_contact
-        })
-
-        self.current_index += 1
-        self.show_triplet()
     def end_session(self):
         if not self.session_active:
             return
