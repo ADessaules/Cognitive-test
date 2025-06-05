@@ -86,6 +86,17 @@ class FamousFaceTest(QMainWindow):
                 "Bernard Tapie", "Dominique  Strauss Kahn", "Fabrice Luchini", "Charles Aznavour", "Jack Nicholson"
             ])
         }
+        self.triplet_map_by_index = {
+            f"image_{int(prefix)}_0": sorted(images, key=lambda name: int(name.split("_")[2].split(".")[0]))
+            for prefix, images in triplet_dict.items()
+            if len(images) == 3
+        }
+
+        self.paul_dir = Path("Paul")
+        self.patient_selector = QComboBox()
+        self.patient_selector.addItems([f.stem for f in self.paul_dir.glob("*.py")])
+        self.patient_selector.currentTextChanged.connect(self.load_patient_selection)
+        self.selected_triplets = []
 
         self.init_test_state()
         self.timer = QTimer()
@@ -128,6 +139,8 @@ class FamousFaceTest(QMainWindow):
         self.main_layout = QHBoxLayout()
 
         self.config_layout = QVBoxLayout()
+        self.config_layout.addWidget(QLabel("Sélectionner un patient :"))
+        self.config_layout.addWidget(self.patient_selector)
         self.prenom_input = QLineEdit()
         self.prenom_input.setPlaceholderText("Prénom")
         self.nom_input = QLineEdit()
@@ -166,6 +179,22 @@ class FamousFaceTest(QMainWindow):
         self.main_layout.addWidget(self.image_panel)
 
         self.central_widget.setLayout(self.main_layout)
+        
+    def load_patient_selection(self, patient_name):
+        try:
+            module_path = self.paul_dir / f"{patient_name}.py"
+            import importlib.util
+            spec = importlib.util.spec_from_file_location("details", module_path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            if hasattr(module, "details"):
+                selections = module.details.get("Sélections", [])
+                self.selected_triplets = [self.triplet_map_by_index[img] for img in selections if img in self.triplet_map_by_index]
+            else:
+                self.selected_triplets = []
+        except Exception as e:
+            print(f"Erreur lors du chargement de {patient_name} : {e}")
+            self.selected_triplets = []
 
     def prepare_test(self):
         prenom = self.prenom_input.text().strip()
@@ -193,6 +222,10 @@ class FamousFaceTest(QMainWindow):
         except ValueError:
             self.timer_duration = 3
 
+        if self.selected_triplets:
+            self.current_triplets = self.selected_triplets[:]
+        else:
+            self.current_triplets = self.all_triplets[:]
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setFocus()
         self.waiting_screen.show()
