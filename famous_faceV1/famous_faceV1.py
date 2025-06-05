@@ -2,6 +2,7 @@ import sys
 import os
 import random
 import time
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 from PyQt6.QtWidgets import (
@@ -186,33 +187,40 @@ class FamousFaceTest(QMainWindow):
         self.central_widget.setLayout(self.main_layout)
         
     def load_patient_selection(self, patient_name):
-        if patient_name == "-- Aucun --":
-            self.selected_triplets = []
-            self.selection_loaded = False
-            return
+    if patient_name == "-- Aucun --":
+        self.selected_triplets = []
+        self.selection_loaded = False
+        return
 
-        module_path = self.patients_dir / patient_name / "details_patient.py"
-        if not module_path.exists():
-            self.selected_triplets = []
-            self.selection_loaded = False
-            return
+    db_path = Path(__file__).resolve().parent.parent / "Paul" / "patients.db"
+    if not db_path.exists():
+        QMessageBox.critical(self, "Erreur", f"Base de données introuvable : {db_path}")
+        self.selected_triplets = []
+        self.selection_loaded = False
+        return
 
-        try:
-            import importlib.util
-            spec = importlib.util.spec_from_file_location("details", module_path)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            if hasattr(module, "details"):
-                selections = module.details.get("Sélections", [])
-                self.selected_triplets = [self.triplet_map_by_index[img] for img in selections if img in self.triplet_map_by_index]
-                self.selection_loaded = True if self.selected_triplets else False
-            else:
-                self.selected_triplets = []
-                self.selection_loaded = False
-        except Exception as e:
-            print(f"Erreur chargement patient {patient_name} :", e)
+    try:
+        conn = sqlite3.connect(str(db_path))
+        cursor = conn.cursor()
+        cursor.execute("SELECT selection FROM patients WHERE nom = ?", (patient_name,))
+        result = cursor.fetchone()
+        conn.close()
+
+        if result and result[0]:
+            raw_data = result[0].split(",")  # les noms d’image sont séparés par des virgules
+            images = [img.strip() for img in raw_data if img.strip()]
+            self.selected_triplets = [
+                self.triplet_map_by_index[img] for img in images if img in self.triplet_map_by_index
+            ]
+            self.selection_loaded = True if self.selected_triplets else False
+        else:
             self.selected_triplets = []
             self.selection_loaded = False
+
+    except Exception as e:
+        print(f"Erreur lors du chargement de la sélection depuis la BDD :", e)
+        self.selected_triplets = []
+        self.selection_loaded = False
             
     def prepare_test(self):
         prenom = self.prenom_input.text().strip()
