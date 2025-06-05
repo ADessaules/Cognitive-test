@@ -93,12 +93,12 @@ class FamousFaceTest(QMainWindow):
         }
 
         from pathlib import Path
-        self.paul_dir = Path(__file__).resolve().parent.parent / "Paul"
+        self.patients_dir = Path(__file__).resolve().parent.parent / "Paul" / "Patients"
         self.patient_selector = QComboBox()
         self.patient_selector.addItem("-- Aucun --")
-        for f in self.paul_dir.glob("*.py"):
-            if f.stem not in ("__init__", "__pycache__"):
-                self.patient_selector.addItem(f.stem)
+        for folder in self.patients_dir.iterdir():
+            if folder.is_dir():
+                self.patient_selector.addItem(folder.name)
         self.patient_selector.currentTextChanged.connect(self.load_patient_selection)
         self.selected_triplets = []
         self.selection_loaded = False
