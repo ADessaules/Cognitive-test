@@ -1,4 +1,4 @@
-vfrom PyQt6.QtWidgets import QWidget, QPushButton, QLabel, QVBoxLayout, QDialog, QMessageBox, QGridLayout, QScrollArea
+from PyQt6.QtWidgets import QWidget, QPushButton, QLabel, QVBoxLayout, QDialog, QMessageBox, QGridLayout, QScrollArea
 from PyQt6.QtGui import QPixmap, QPainter
 from PyQt6.QtCore import Qt
 import sqlite3
