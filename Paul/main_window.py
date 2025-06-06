@@ -98,8 +98,8 @@ class MainApp(QWidget):
         self.selection_patient_fenetre = SelectionPatientDialog(self.lancer_bisection)
         self.selection_patient_fenetre.show()
 
-    def lancer_selection_celebrite(self, patient_id):
-        # Vérifier si ce patient a déjà fait une sélection
+    def lancer_selection_celebrite(self, patient_id, patient_name):
+        self.selection_fenetre = SelectionCelebrites(patient_id, patient_name)
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
         cursor.execute("SELECT COUNT(*) FROM selections WHERE patient_id = ?", (patient_id,))
