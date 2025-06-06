@@ -111,6 +111,14 @@ class SelectionCelebrites(QDialog):
         conn.commit()
         conn.close()
         QMessageBox.information(self, "Enregistré", "Sélection mise à jour avec succès.")
+        selected_images = [os.path.splitext(os.path.basename(info["image"]))[0]
+                           for info in self.selections.values() if info["selected"]]
+
+        patient_folder = os.path.join("Paul", "Patients", str(self.patient_id))
+        os.makedirs(patient_folder, exist_ok=True)
+        selection_path = os.path.join(patient_folder, "selection.txt")
+        with open(selection_path, "w") as f:
+            f.write(",".join(selected_images))
         self.close()
 
     def stop_test(self):
@@ -132,4 +140,12 @@ class SelectionCelebrites(QDialog):
         conn.close()
 
         QMessageBox.information(self, "Test interrompu", "Test arrêté. Sélections sauvegardées.")
+        selected_images = [os.path.splitext(os.path.basename(info["image"]))[0]
+                           for info in self.selections.values() if info["selected"]]
+
+        patient_folder = os.path.join("Paul", "Patients", str(self.patient_id))
+        os.makedirs(patient_folder, exist_ok=True)
+        selection_path = os.path.join(patient_folder, "selection.txt")
+        with open(selection_path, "w") as f:
+            f.write(",".join(selected_images))
         self.close()
