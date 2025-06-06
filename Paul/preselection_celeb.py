@@ -115,7 +115,7 @@ class SelectionCelebrites(QDialog):
         conn.close()
         self.sauvegarder_txt()
         QMessageBox.information(self, "Enregistré", "Sélection mise à jour avec succès.")
-        patient_folder = os.path.join("Paul", "Patients", self.patient_name)
+        patient_folder = os.path.join(os.path.dirname(__file__), "Patients", str(self.patient_id))
         os.makedirs(patient_folder, exist_ok=True)
         selection_path = os.path.join(patient_folder, "selection.txt")
         
@@ -140,7 +140,7 @@ class SelectionCelebrites(QDialog):
         conn.close()
         self.sauvegarder_txt()
         QMessageBox.information(self, "Test interrompu", "Test arrêté. Sélections sauvegardées.")
-        patient_folder = os.path.join("Paul", "Patients", self.patient_name)
+        patient_folder = os.path.join(os.path.dirname(__file__), "Patients", str(self.patient_id))
         os.makedirs(patient_folder, exist_ok=True)
         selection_path = os.path.join(patient_folder, "selection.txt")
         
