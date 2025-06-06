@@ -28,5 +28,6 @@ class SelectionPatientDialog(QDialog):
     def patient_selectionne(self, item):
         index = self.liste_widget.row(item)
         patient_id = self.patients[index][0]
+        patient_name = self.patients[index][1]  # 🔸 Ajouté : récupération du nom
         self.callback(patient_id, patient_name)
         self.close()
