@@ -100,7 +100,17 @@ class MainApp(QWidget):
 
     def lancer_selection_celebrite(self, patient_id, patient_name):
         self.selection_fenetre = SelectionCelebrites(patient_id, patient_name)
-        self.selection_fenetre.show()
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM selections WHERE patient_id = ?", (patient_id,))
+        count = cursor.fetchone()[0]
+        conn.close()
+
+        if count > 0:
+            QMessageBox.information(self, "Déjà sélectionné", "Ce patient a déjà effectué la préselection.")
+        else:
+            self.selection_fenetre = SelectionCelebrites(patient_id, patient_name)
+            self.selection_fenetre.show()
 
     def lancer_bisection(self, patient_id):
         self.bisection_fenetre = BisectionTest(patient_id)
