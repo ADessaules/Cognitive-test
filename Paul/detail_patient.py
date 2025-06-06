@@ -7,11 +7,12 @@ from preselection_celeb import SelectionCelebrites
 from bisection_test import BisectionTest
 
 class DetailsPatient(QDialog):
-    def __init__(self, patient_id):
+    def __init__(self, patient_id, patient_name):
         super().__init__()
         self.setWindowTitle("Détails du Patient")
         self.setGeometry(250, 250, 500, 500)
         self.patient_id = patient_id
+        self.patient_name = patient_name
         
         self.layout = QVBoxLayout()
         self.btn_layout = QHBoxLayout()
@@ -80,7 +81,7 @@ class DetailsPatient(QDialog):
         self.contenu.addWidget(btn_revoir_selection)
 
     def revoir_selection(self):
-        self.selection_fenetre = SelectionCelebrites(self.patient_id)
+        self.selection_fenetre = SelectionCelebrites(self.patient_id, self.patient_name)
         self.selection_fenetre.show()
 
     def afficher_bisection(self):
