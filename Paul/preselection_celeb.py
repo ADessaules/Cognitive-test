@@ -1,12 +1,10 @@
-from PyQt6.QtWidgets import QWidget, QPushButton, QLabel, QVBoxLayout, QDialog, QMessageBox, QGridLayout, QScrollArea
+vfrom PyQt6.QtWidgets import QWidget, QPushButton, QLabel, QVBoxLayout, QDialog, QMessageBox, QGridLayout, QScrollArea
 from PyQt6.QtGui import QPixmap, QPainter
 from PyQt6.QtCore import Qt
 import sqlite3
 import os
 import glob
-
 from constant import DOSSIER_IMAGES, DB_FILE
-
 
 class SelectionCelebrites(QDialog):
     def __init__(self, patient_id, patient_name):
@@ -23,7 +21,6 @@ class SelectionCelebrites(QDialog):
             fichiers.extend(glob.glob(os.path.join(DOSSIER_IMAGES, ext)))
 
         fichiers_filtres = [f for f in fichiers if os.path.splitext(f)[0].endswith("_0")]
-
         self.celebrites = [{"nom": os.path.splitext(os.path.basename(f))[0].replace("_", " "), "image": f}
                            for f in fichiers_filtres]
 
@@ -35,7 +32,6 @@ class SelectionCelebrites(QDialog):
         scroll_widget.setLayout(self.grid_layout)
         scroll.setWidgetResizable(True)
         scroll.setWidget(scroll_widget)
-
         self.layout.addWidget(scroll)
 
         self.btn_valider = QPushButton("Valider la sélection")
@@ -91,12 +87,10 @@ class SelectionCelebrites(QDialog):
             label.setPixmap(transparent)
         return handler
 
-    def sauvegarder_txt(self):
-        selected_images = [
-            os.path.splitext(os.path.basename(info["image"]))[0]
-            for info in self.selections.values() if info["selected"]
-        ]
-        patient_folder = os.path.join("Paul", "Patients", self.patient_name)
+    def enregistrer_selection_txt(self):
+        selected_images = [os.path.splitext(os.path.basename(info["image"]))[0]
+                           for info in self.selections.values() if info["selected"]]
+        patient_folder = os.path.join("Patients", self.patient_name)
         os.makedirs(patient_folder, exist_ok=True)
         with open(os.path.join(patient_folder, "selection.txt"), "w") as f:
             f.write(",".join(selected_images))
@@ -113,17 +107,8 @@ class SelectionCelebrites(QDialog):
                 )
         conn.commit()
         conn.close()
-        self.sauvegarder_txt()
+        self.enregistrer_selection_txt()
         QMessageBox.information(self, "Enregistré", "Sélection mise à jour avec succès.")
-        patient_folder = os.path.join(os.path.dirname(__file__), "Patients", str(self.patient_id))
-        os.makedirs(patient_folder, exist_ok=True)
-        selection_path = os.path.join(patient_folder, "selection.txt")
-        
-        selected_images = [os.path.splitext(os.path.basename(info["image"]))[0]
-                           for info in self.selections.values() if info["selected"]]
-        
-        with open(selection_path, "w") as f:
-            f.write(",".join(selected_images))
         self.close()
 
     def stop_test(self):
@@ -138,15 +123,6 @@ class SelectionCelebrites(QDialog):
                 )
         conn.commit()
         conn.close()
-        self.sauvegarder_txt()
+        self.enregistrer_selection_txt()
         QMessageBox.information(self, "Test interrompu", "Test arrêté. Sélections sauvegardées.")
-        patient_folder = os.path.join(os.path.dirname(__file__), "Patients", str(self.patient_id))
-        os.makedirs(patient_folder, exist_ok=True)
-        selection_path = os.path.join(patient_folder, "selection.txt")
-        
-        selected_images = [os.path.splitext(os.path.basename(info["image"]))[0]
-                           for info in self.selections.values() if info["selected"]]
-        
-        with open(selection_path, "w") as f:
-            f.write(",".join(selected_images))
         self.close()
