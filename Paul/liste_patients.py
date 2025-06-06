@@ -41,5 +41,5 @@ class ListePatients(QDialog):
     def afficher_details_patient(self, item):
         index = self.liste_widget.row(item)
         patient_id = self.patients[index][0]
-        self.details_fenetre = DetailsPatient(patient_id)
+        self.details_fenetre = DetailsPatient(patient_id, patient_name)
         self.details_fenetre.show()
