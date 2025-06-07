@@ -103,11 +103,23 @@ class BisectionTest(QWidget):
         else:
             reponse = "non fait"
 
+        now_datetime=datetime.now()
+
         self.trial_data.append({
-        "Essai": self.attempt + 1,
-        "Temps total (s)": round(elapsed_since_start, 2) if elapsed_since_start else "NA",
-        "Réponse": reponse,
-        "Temps de réponse (s)": round(response_time, 2) if response_time else "NA"
+            "Essai": self.attempt + 1,
+            "Date": now_datetime.strftime("%Y-%m-%d"),
+            "Heure": now_datetime.strftime("%H:%M:%S"),
+            "Temps total (s)": round(elapsed_since_start, 2) if elapsed_since_start else "NA",
+            "Réponse (écart en cm)": reponse,
+            "Temps de réponse (s)": round(response_time, 2) if response_time else "NA",
+            "x1": round(self.x1, 2), 
+            "y1": round(self.y1, 2), 
+            "x2": round(self.x2, 2), 
+            "y2": round(self.y2, 2),
+            "Centre X (cx)": round(self.bar_cx, 2),
+            "Centre Y (cy)": round(self.bar_cy, 2),
+            "Clic X": round(clic_x, 2) if clic_x is not None else "NA",
+            "Clic Y": round(clic_y, 2) if clic_y is not None else "NA"
         })
 
 
