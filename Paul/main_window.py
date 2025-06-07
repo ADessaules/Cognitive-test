@@ -1,4 +1,5 @@
 from PyQt6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QInputDialog, QMessageBox
+from PyQt6.QtGui import QGuiApplication
 import os
 import sqlite3
 from constant import DB_FILE, DOSSIER_PATIENTS
@@ -113,5 +114,13 @@ class MainApp(QWidget):
             self.selection_fenetre.show()
 
     def lancer_bisection(self, patient_id):
-        self.bisection_fenetre = BisectionTest(patient_id)
+        screens = QGuiApplication.screens()
+
+        if len(screens) >= 2:
+            screen_experimenter = screens[0]
+            screen_patient = screens[1]
+        else:
+            screen_experimenter = screen_patient = screens[0]
+
+        self.bisection_fenetre = BisectionTest(patient_id, screen_patient, screen_experimenter)
         self.bisection_fenetre.show()
