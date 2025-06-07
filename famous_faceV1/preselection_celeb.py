@@ -6,7 +6,7 @@ import os
 import glob
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from constant import DB_FILE, DOSSIER_PATIENTS
+from constant import DB_FILE, DOSSIER_PATIENTS, DOSSIER_IMAGES
 
 class SelectionCelebrites(QDialog):
     def __init__(self, patient_id, patient_name):
