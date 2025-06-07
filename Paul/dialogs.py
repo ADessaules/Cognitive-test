@@ -1,4 +1,5 @@
 import sqlite3
+import inspect
 from PyQt6.QtWidgets import QVBoxLayout, QDialog, QListWidget
 from constant import DB_FILE
 
