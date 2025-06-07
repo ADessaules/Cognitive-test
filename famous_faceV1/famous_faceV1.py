@@ -452,10 +452,11 @@ class FamousFaceTest(QMainWindow):
         now = datetime.now()
         timestamp = now.strftime("%Y_%m_%d_%H%M")
         prenom_nom = self.participant_name.replace(" ", "").lower()
-        nom_fichier = f"{prenom_nom}_{timestamp}_{self.stim_contact}-{self.stim_intensite}-{self.stim_duree}_{self.test_name}.xlsx"
-
+        filename = f"{prenom_nom}_{timestamp}_{self.stim_contact}-{self.stim_intensite}-{self.stim_duree}_{self.test_name}.xlsx"
+        output_path = os.path.join(os.path.dirname(__file__), filename)
+        
         try:
-            full_df.to_excel(nom_fichier, index=False, engine='openpyxl')
+            full_df.to_excel(output_path, index=False, engine='openpyxl')
             QMessageBox.information(self, "Fin", f"Test terminé. Résultats sauvegardés dans {nom_fichier}.")
         except PermissionError:
             QMessageBox.critical(self, "Erreur", "Le fichier Excel est ouvert. Fermez-le puis relancez.")
