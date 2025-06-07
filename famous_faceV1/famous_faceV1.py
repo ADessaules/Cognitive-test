@@ -457,7 +457,7 @@ class FamousFaceTest(QMainWindow):
         
         try:
             full_df.to_excel(output_path, index=False, engine='openpyxl')
-            QMessageBox.information(self, "Fin", f"Test terminé. Résultats sauvegardés dans {nom_fichier}.")
+            MessageBox.information(self, "Fin", f"Test terminé. Résultats sauvegardés dans {filename}.")
         except PermissionError:
             QMessageBox.critical(self, "Erreur", "Le fichier Excel est ouvert. Fermez-le puis relancez.")
 
