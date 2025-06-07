@@ -264,13 +264,11 @@ class FamousFaceTest(QMainWindow):
             self.selection_loaded = False
             
     def prepare_test(self):
-        prenom = self.prenom_input.text().strip()
-        nom = self.nom_input.text().strip()
         contact = self.contact_input.text().strip()
         intensite = self.intensite_input.text().strip()
         duree = self.duree_input.text().strip()
 
-        if not all([prenom, nom, contact, intensite, duree]):
+        if not all([contact, intensite, duree]):
             QMessageBox.warning(self, "Erreur", "Veuillez remplir tous les champs.")
             return
 
