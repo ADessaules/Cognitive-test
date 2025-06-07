@@ -1,6 +1,9 @@
 from PyQt6.QtWidgets import QVBoxLayout, QDialog, QMessageBox, QListWidget
 import sqlite3
-from constant import DB_FILE
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from constant import DB_FILE, DOSSIER_PATIENTS
 from detail_patient import DetailsPatient
 
 # --- Fenêtre de liste des patients ---
