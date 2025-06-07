@@ -65,11 +65,22 @@ class FamousFaceTest(QMainWindow):
             except IndexError:
                 continue
 
-        self.all_triplets = [
-            sorted(images, key=lambda name: int(name.split("_")[2].split(".")[0]))
-            for _, images in sorted(triplet_dict.items(), key=lambda item: int(item[0]))
-            if len(images) == 3
-        ]
+        self.selection_images = set()
+        if hasattr(self, "selected_patient_name"):
+            selection_path = os.path.join("Paul", "Patients", self.selected_patient_name, "selection.txt")
+            if os.path.exists(selection_path):
+                with open(selection_path, "r", encoding="utf-8") as f:
+                    self.selection_images = set([img.strip() for img in f.read().split(",") if img.strip()])
+        
+        # Construire les triplets filtrés
+        self.all_triplets = []
+        for _, images in sorted(triplet_dict.items(), key=lambda item: int(item[0])):
+            if len(images) == 3:
+                triplet = sorted(images, key=lambda name: int(name.split("_")[2].split(".")[0]))
+                # Vérifie que les 3 images sont bien sélectionnées
+                image_prefixes = {os.path.splitext(img)[0] for img in triplet}
+                if image_prefixes.issubset(self.selection_images):
+                    self.all_triplets.append(triplet)
 
         random.shuffle(self.all_triplets)
         self.current_triplets = self.all_triplets[:]
