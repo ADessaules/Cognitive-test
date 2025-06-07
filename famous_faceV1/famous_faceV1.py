@@ -284,12 +284,23 @@ class FamousFaceTest(QMainWindow):
             self.error_indices = []
             self.trial_results = []
             self.nurse_clicks = []
-            self.current_triplets = self.all_triplets[:]
-            random.shuffle(self.current_triplets)
+    
+            # Utiliser les triplets sélectionnés
+            if self.selection_loaded and self.selected_triplets:
+                self.current_triplets = self.selected_triplets[:]
+                random.shuffle(self.current_triplets)
+                print(f"🔁 {len(self.current_triplets)} triplets sélectionnés pour le test.")
+            else:
+                print("⚠️ Aucun triplet sélectionné.")
+                QMessageBox.warning(self, "Erreur", "Aucun triplet sélectionné à afficher.")
+                self.end_session()
+                return
+
             self.session_start_time = time.time()
             self.show_triplet()
 
     def show_triplet(self):
+        print(f"🎯 Affichage du triplet {self.current_index + 1}/{len(self.current_triplets)}: {self.current_triplets[self.current_index]}")
         for layout in (self.image_layout, self.patient_window.image_layout):
             for i in reversed(range(layout.count())):
                 widget = layout.itemAt(i).widget()
