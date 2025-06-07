@@ -1,7 +1,9 @@
 from PyQt6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QInputDialog, QMessageBox
 from PyQt6.QtGui import QGuiApplication
 import os
+import sys
 import sqlite3
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from constant import DB_FILE, DOSSIER_PATIENTS
 from liste_patients import ListePatients
 from preselection_celeb import SelectionCelebrites
