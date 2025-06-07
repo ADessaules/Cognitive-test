@@ -264,13 +264,12 @@ class FamousFaceTest(QMainWindow):
         except ValueError:
             self.timer_duration = 3
 
-        if self.selection_loaded:
+        if self.selection_loaded and self.selected_triplets:
+            random.shuffle(self.selected_triplets)
             self.current_triplets = self.selected_triplets[:]
         else:
-            if self.patient_selector.currentText() != "-- Aucun --":
-                QMessageBox.warning(self, "Pas de sélection", "Ce patient n'a pas encore effectué de sélection. Veuillez retourner à la présélection.")
-                return
-            self.current_triplets = self.selected_triplets[:]
+            QMessageBox.warning(self, "Pas de sélection", "Ce patient n'a pas encore effectué de sélection. Veuillez retourner à la présélection.")
+            return
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setFocus()
         self.waiting_screen.show()
