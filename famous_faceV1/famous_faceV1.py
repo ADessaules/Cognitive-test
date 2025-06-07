@@ -72,15 +72,14 @@ class FamousFaceTest(QMainWindow):
                 with open(selection_path, "r", encoding="utf-8") as f:
                     self.selection_images = set([img.strip() for img in f.read().split(",") if img.strip()])
         
-        # Construire les triplets filtrés
+        # Construire les triplets filtrés à partir du fichier selection.txt
         self.all_triplets = []
-        for _, images in sorted(triplet_dict.items(), key=lambda item: int(item[0])):
-            if len(images) == 3:
-                triplet = sorted(images, key=lambda name: int(name.split("_")[2].split(".")[0]))
-                # Vérifie que les 3 images sont bien sélectionnées
-                image_prefixes = {os.path.splitext(img)[0] for img in triplet}
-                if image_prefixes.issubset(self.selection_images):
-                    self.all_triplets.append(triplet)
+        prefixes = set("_".join(img.strip().split("_")[:2]) for img in self.selection_images)
+        
+        for prefix in prefixes:
+            triplet = [f"{prefix}_{i}.jpg" for i in range(3)]  # .jpg ou .png selon ton cas
+            if all(os.path.exists(os.path.join(self.image_folder, img)) for img in triplet):
+                self.all_triplets.append(triplet)
 
         random.shuffle(self.all_triplets)
         self.current_triplets = self.all_triplets[:]
