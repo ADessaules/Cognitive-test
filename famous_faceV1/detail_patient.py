@@ -1,8 +1,10 @@
 from PyQt6.QtWidgets import QPushButton, QLabel, QVBoxLayout, QHBoxLayout, QDialog, QGridLayout, QScrollArea, QWidget
 from PyQt6.QtGui import QPixmap
 import sqlite3
+import sys
 import os
-from constant import DB_FILE
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from constant import DB_FILE, DOSSIER_PATIENTS
 from preselection_celeb import SelectionCelebrites
 from bisection_test import BisectionTest
 
