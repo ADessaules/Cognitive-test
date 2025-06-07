@@ -154,13 +154,16 @@ class FamousFaceTest(QMainWindow):
         self.setCentralWidget(self.central_widget)
         self.main_layout = QHBoxLayout()
 
+        btn_preselection = QPushButton("Aller à la présélection")
+        btn_preselection.clicked.connect(self.launch_preselection_interface)
+        btn_retour_interface = QPushButton("Retour à l'interface")
+        btn_retour_interface.clicked.connect(self.return_to_main_interface)
+        
+        self.config_layout.addWidget(btn_preselection)
+        self.config_layout.addWidget(btn_retour_interface)
         self.config_layout = QVBoxLayout()
         self.config_layout.addWidget(QLabel("Sélectionner un patient :"))
         self.config_layout.addWidget(self.patient_selector)
-        self.prenom_input = QLineEdit()
-        self.prenom_input.setPlaceholderText("Prénom")
-        self.nom_input = QLineEdit()
-        self.nom_input.setPlaceholderText("Nom")
         self.contact_input = QLineEdit()
         self.contact_input.setPlaceholderText("Contacts de stimulation")
         self.intensite_input = QLineEdit()
@@ -183,7 +186,7 @@ class FamousFaceTest(QMainWindow):
         self.stop_btn = QPushButton("Arrêter et sauvegarder")
         self.stop_btn.clicked.connect(self.end_session)
 
-        for widget in [self.prenom_input, self.nom_input, self.contact_input, self.intensite_input, self.duree_input,
+        for widget in [self.contact_input, self.intensite_input, self.duree_input,
                        self.mode_label, self.mode_selector, self.timer_input, self.start_btn, self.stop_btn]:
             self.config_layout.addWidget(widget)
 
@@ -195,6 +198,20 @@ class FamousFaceTest(QMainWindow):
         self.main_layout.addWidget(self.image_panel)
 
         self.central_widget.setLayout(self.main_layout)
+
+    def launch_preselection_interface(self):
+        try:
+            subprocess.Popen(["python", "./Paul/main.py"])
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Impossible d'ouvrir l'interface de présélection : {e}")
+
+    def return_to_main_interface(self):
+        try:
+            self.patient_window.close()
+            self.close()
+            subprocess.Popen(["python", "interface.py"])
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Impossible de retourner à l'interface principale : {e}")
         
     def load_patient_selection(self, patient_name):
         if patient_name == "-- Aucun --":
@@ -250,7 +267,11 @@ class FamousFaceTest(QMainWindow):
             return
 
         self.init_test_state()
-        self.participant_name = f"{prenom} {nom}"
+        selected = self.patient_selector.currentText()
+        if selected == "-- Aucun --":
+            QMessageBox.warning(self, "Erreur", "Veuillez sélectionner un patient.")
+            return
+        self.participant_name = selected
         self.stim_contact = contact
         self.stim_intensite = intensite
         self.stim_duree = duree
