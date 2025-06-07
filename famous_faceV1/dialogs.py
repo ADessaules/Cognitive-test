@@ -1,7 +1,10 @@
 import sqlite3
 import inspect
 from PyQt6.QtWidgets import QVBoxLayout, QDialog, QListWidget
-from constant import DB_FILE
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from constant import DB_FILE, DOSSIER_PATIENTS
 
 class SelectionPatientDialog(QDialog):
     def __init__(self, callback):
