@@ -1,6 +1,7 @@
 import sys
 import os
 import random
+import subprocess
 import time
 import sqlite3
 from datetime import datetime
@@ -153,48 +154,74 @@ class FamousFaceTest(QMainWindow):
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.main_layout = QHBoxLayout()
-
-        self.config_layout = QVBoxLayout()
+    
+        self.config_layout = QVBoxLayout()  # ✅ Do this first!
+    
+        # 🆕 Add buttons *after* defining self.config_layout
+        btn_preselection = QPushButton("Aller à la présélection")
+        btn_preselection.clicked.connect(self.launch_preselection_interface)
+        btn_retour_interface = QPushButton("Retour à l'interface")
+        btn_retour_interface.clicked.connect(self.return_to_main_interface)
+    
+        self.config_layout.addWidget(btn_preselection)
+        self.config_layout.addWidget(btn_retour_interface)
+    
         self.config_layout.addWidget(QLabel("Sélectionner un patient :"))
         self.config_layout.addWidget(self.patient_selector)
-        self.prenom_input = QLineEdit()
-        self.prenom_input.setPlaceholderText("Prénom")
-        self.nom_input = QLineEdit()
-        self.nom_input.setPlaceholderText("Nom")
+    
+        # Retire prénom/nom ici si ce n’est plus utile
         self.contact_input = QLineEdit()
         self.contact_input.setPlaceholderText("Contacts de stimulation")
         self.intensite_input = QLineEdit()
         self.intensite_input.setPlaceholderText("Intensité (mA)")
         self.duree_input = QLineEdit()
         self.duree_input.setPlaceholderText("Durée (ms)")
-
+    
         self.mode_label = QLabel("Mode d'affichage des images :")
         self.mode_selector = QComboBox()
         self.mode_selector.addItems(["Image au clic", "Temps imparti", "Barre espace"])
         self.mode_selector.currentTextChanged.connect(self.toggle_timer_input)
-
+    
         self.timer_input = QLineEdit()
         self.timer_input.setPlaceholderText("Temps (en secondes)")
         self.timer_input.setVisible(False)
-
+    
         self.start_btn = QPushButton("Valider et Préparer le test")
         self.start_btn.clicked.connect(self.prepare_test)
-
+    
         self.stop_btn = QPushButton("Arrêter et sauvegarder")
         self.stop_btn.clicked.connect(self.end_session)
-
-        for widget in [self.prenom_input, self.nom_input, self.contact_input, self.intensite_input, self.duree_input,
-                       self.mode_label, self.mode_selector, self.timer_input, self.start_btn, self.stop_btn]:
+    
+        for widget in [
+            self.contact_input, self.intensite_input, self.duree_input,
+            self.mode_label, self.mode_selector, self.timer_input,
+            self.start_btn, self.stop_btn
+        ]:
             self.config_layout.addWidget(widget)
-
+    
         self.image_layout = QHBoxLayout()
         self.image_panel = QWidget()
         self.image_panel.setLayout(self.image_layout)
-
+    
         self.main_layout.addLayout(self.config_layout)
         self.main_layout.addWidget(self.image_panel)
-
         self.central_widget.setLayout(self.main_layout)
+
+    def launch_preselection_interface(self):
+        try:
+            self.patient_window.close()
+            self.close()  # ✅ Ferme la fenêtre du test
+            subprocess.Popen(["python", "./Paul/main.py"])
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Impossible d'ouvrir l'interface de présélection : {e}")
+            
+    def return_to_main_interface(self):
+        try:
+            self.patient_window.close()
+            self.close()
+            subprocess.Popen(["python", "interface.py"])
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Impossible de retourner à l'interface principale : {e}")
         
     def load_patient_selection(self, patient_name):
         if patient_name == "-- Aucun --":
@@ -239,18 +266,20 @@ class FamousFaceTest(QMainWindow):
             self.selection_loaded = False
             
     def prepare_test(self):
-        prenom = self.prenom_input.text().strip()
-        nom = self.nom_input.text().strip()
         contact = self.contact_input.text().strip()
         intensite = self.intensite_input.text().strip()
         duree = self.duree_input.text().strip()
 
-        if not all([prenom, nom, contact, intensite, duree]):
+        if not all([contact, intensite, duree]):
             QMessageBox.warning(self, "Erreur", "Veuillez remplir tous les champs.")
             return
 
         self.init_test_state()
-        self.participant_name = f"{prenom} {nom}"
+        selected = self.patient_selector.currentText()
+        if selected == "-- Aucun --":
+            QMessageBox.warning(self, "Erreur", "Veuillez sélectionner un patient.")
+            return
+        self.participant_name = selected
         self.stim_contact = contact
         self.stim_intensite = intensite
         self.stim_duree = duree
@@ -425,11 +454,12 @@ class FamousFaceTest(QMainWindow):
         now = datetime.now()
         timestamp = now.strftime("%Y_%m_%d_%H%M")
         prenom_nom = self.participant_name.replace(" ", "").lower()
-        nom_fichier = f"{prenom_nom}_{timestamp}_{self.stim_contact}-{self.stim_intensite}-{self.stim_duree}_{self.test_name}.xlsx"
-
+        filename = f"{prenom_nom}_{timestamp}_{self.stim_contact}-{self.stim_intensite}-{self.stim_duree}_{self.test_name}.xlsx"
+        output_path = os.path.join(os.path.dirname(__file__), filename)
+        
         try:
-            full_df.to_excel(nom_fichier, index=False, engine='openpyxl')
-            QMessageBox.information(self, "Fin", f"Test terminé. Résultats sauvegardés dans {nom_fichier}.")
+            full_df.to_excel(output_path, index=False, engine='openpyxl')
+            QMessageBox.information(self, "Fin", f"Test terminé. Résultats sauvegardés dans {filename}.")
         except PermissionError:
             QMessageBox.critical(self, "Erreur", "Le fichier Excel est ouvert. Fermez-le puis relancez.")
 
