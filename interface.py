@@ -67,6 +67,7 @@ class MainWindow(QMainWindow):
         test_name = item.text()
         if test_name == "famous_faceV1":
             try:
+                self.hide()  # ⬅️ Masquer l'interface principale
                 subprocess.Popen(["python", "./famous_faceV1/famous_faceV1.py"])
             except Exception as e:
                 print(f"Erreur lors du lancement du test : {e}")
