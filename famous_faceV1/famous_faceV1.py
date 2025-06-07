@@ -51,7 +51,7 @@ class FamousFaceTest(QMainWindow):
         self.setWindowTitle("Famous Face Test - Expérimentateur")
         self.setGeometry(100, 100, 1200, 600)
 
-        self.image_folder = "image_famous_faceV1"
+        self.image_folder = os.path.join(os.path.dirname(__file__), "image_famous_faceV1")
         self.test_name = "famous_face"
 
         all_images = [img for img in os.listdir(self.image_folder) if img.lower().endswith((".png", ".jpg", ".jpeg"))]
