@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QMessageBox, QLabel, QApplication
+from PyQt6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QMessageBox, QLabel, QApplication,QHBoxLayout
 from PyQt6.QtGui import QPainter, QPen, QFont
 from PyQt6.QtCore import Qt, QTimer
 import sqlite3
@@ -29,8 +29,24 @@ class BisectionTest(QWidget):
         self.btn_stop.setStyleSheet("font-size: 18px; background-color: red; color: white; padding: 5px;")
         self.btn_stop.clicked.connect(self.stop_test)
 
+        self.btn_start = QPushButton("Démarrer le test")
+        self.btn_start.setStyleSheet("font-size: 18px; background-color: green; color: white; padding: 5px;")
+        self.btn_start.clicked.connect(self.start_test)
+
+        self.preview = PreviewWidget()
+
+        # Layout principal vertical
         layout = QVBoxLayout()
         layout.addWidget(self.btn_stop)
+        layout.addWidget(self.btn_start)
+
+        # Layout horizontal pour centrer la preview
+        hbox = QHBoxLayout()
+        hbox.addStretch()
+        hbox.addWidget(self.preview)
+        hbox.addStretch()
+        layout.addLayout(hbox)
+
         self.setLayout(layout)
 
         # Fenêtre patient sur l'autre écran
@@ -39,32 +55,27 @@ class BisectionTest(QWidget):
         self.patient_window.move(screen_patient.geometry().topLeft())
         self.patient_window.show()
 
-        # # self.label_message = QLabel("Appuyez sur ESPACE pour commencer le test", self.patient_window)
-        # self.label_message.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        # self.label_message.setFont(QFont("Arial", 20))
-        # self.label_message.setGeometry(100, screen_patient.geometry().height() // 2 - 50,
-        #                                screen_patient.geometry().width() - 200, 100)
-        # self.label_message.show()
-
         self.patient_window.setFocus()
         self.patient_window.setMouseTracking(True)
-
-        self.btn_start = QPushButton("Démarrer le test")
-        self.btn_start.setStyleSheet("font-size: 18px; background-color: green; color: white; padding: 5px;")
-        self.btn_start.clicked.connect(self.start_test)
-        layout.addWidget(self.btn_start)
 
     def start_test(self):
         self.btn_start.setEnabled(False)  # désactive le bouton après lancement
         self.start_trial()
-
-
 
     def start_trial(self):
         if self.attempt == 0:
             self.start_time = time.time()
         self.trial_start_time = time.time()
         self.patient_window.generate_new_bar()
+
+        self.preview.update_bar(
+            self.patient_window.x1,
+            self.patient_window.y1,
+            self.patient_window.x2,
+            self.patient_window.y2,
+            self.patient_window.width(),
+            self.patient_window.height()
+        )
 
     def record_click(self, clic_x, clic_y):
         now = time.time()
@@ -147,7 +158,6 @@ class BisectionTest(QWidget):
         conn.close()
         return result[0] if result else f"patient_{self.patient_id}"
 
-
 class PatientWindow(QWidget):
     def __init__(self, main_app):
         super().__init__()
@@ -189,8 +199,43 @@ class PatientWindow(QWidget):
         self.waiting_for_input = False
         self.main_app.record_click(event.position().x(), event.position().y())
 
-    # def keyPressEvent(self, event):
-    #     if event.key() == Qt.Key.Key_Space and self.waiting_for_space:
-    #         self.waiting_for_space = False
-    #         self.main_app.label_message.hide()
-    #         self.main_app.start_trial()
+class PreviewWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(300, 300)
+        self.x1 = self.y1 = self.x2 = self.y2 = None
+
+        self.frame_width = 280
+        self.frame_height = 160
+
+        self.frame_x = (self.width() - self.frame_width) // 2
+        self.frame_y = 20
+
+    def update_bar(self, x1, y1, x2, y2, width_real, height_real):
+        scale_x = self.frame_width / width_real
+        scale_y = self.frame_height / height_real
+
+        self.x1 = x1 * scale_x
+        self.y1 = y1 * scale_y
+        self.x2 = x2 * scale_x
+        self.y2 = y2 * scale_y
+
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+
+        pen_frame = QPen(Qt.GlobalColor.black, 3)
+        painter.setPen(pen_frame)
+        painter.drawRect(self.frame_x, self.frame_y, self.frame_width, self.frame_height)
+
+        if None not in (self.x1, self.y1, self.x2, self.y2):
+            pen_line = QPen(Qt.GlobalColor.red, 3)
+            painter.setPen(pen_line)
+
+            bar_x1 = self.x1 + self.frame_x
+            bar_y1 = self.y1 + self.frame_y
+            bar_x2 = self.x2 + self.frame_x
+            bar_y2 = self.y2 + self.frame_y
+
+            painter.drawLine(int(bar_x1), int(bar_y1), int(bar_x2), int(bar_y2))
