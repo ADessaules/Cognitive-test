@@ -211,7 +211,7 @@ class FamousFaceTest(QMainWindow):
         try:
             self.patient_window.close()
             self.close()  # ✅ Ferme la fenêtre du test
-            subprocess.Popen(["python", "./Paul/main.py"])
+            subprocess.Popen(["python", "famous_faceV1/main.py"])
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Impossible d'ouvrir l'interface de présélection : {e}")
             
@@ -219,7 +219,7 @@ class FamousFaceTest(QMainWindow):
         try:
             self.patient_window.close()
             self.close()
-            subprocess.Popen(["python", "interface.py"])
+            subprocess.Popen(["python", "famous_faceV1/main.py"])
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Impossible de retourner à l'interface principale : {e}")
         
