@@ -203,28 +203,28 @@ class FamousFaceTest(QMainWindow):
             return
     
         try:
-            # Chemin du fichier selection.txt
             selection_path = self.patients_dir / patient_name / "selection.txt"
             if not selection_path.exists():
                 self.selected_triplets = []
                 self.selection_loaded = False
                 return
     
-            # Lire le contenu du fichier
             with open(selection_path, "r", encoding="utf-8") as f:
                 content = f.read().strip()
                 selections = [s.strip() for s in content.split(",") if s.strip()]
     
-            # Construire les triplets correspondants
-            self.selected_triplets = [
-                self.triplet_map_by_index[img]
-                for img in selections
-                if img in self.triplet_map_by_index
-            ]
+            prefixes = set("_".join(name.split("_")[:2]) for name in selections)
+    
+            self.selected_triplets = []
+            for prefix in prefixes:
+                triplet = [f"{prefix}_{i}.jpg" for i in range(3)]
+                if all(os.path.exists(os.path.join(self.image_folder, img)) for img in triplet):
+                    self.selected_triplets.append(triplet)
     
             self.selection_loaded = True if self.selected_triplets else False
+    
         except Exception as e:
-            print(f"❌ Erreur lors du chargement de la sélection depuis le fichier : {e}")
+            print(f"❌ Erreur lors du chargement de la sélection : {e}")
             self.selected_triplets = []
             self.selection_loaded = False
             
@@ -260,7 +260,7 @@ class FamousFaceTest(QMainWindow):
             if self.patient_selector.currentText() != "-- Aucun --":
                 QMessageBox.warning(self, "Pas de sélection", "Ce patient n'a pas encore effectué de sélection. Veuillez retourner à la présélection.")
                 return
-            self.current_triplets = self.all_triplets[:]
+            self.current_triplets = self.selected_triplets[:]
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setFocus()
         self.waiting_screen.show()
