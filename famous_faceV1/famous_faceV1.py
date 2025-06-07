@@ -153,50 +153,57 @@ class FamousFaceTest(QMainWindow):
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.main_layout = QHBoxLayout()
-
+    
+        self.config_layout = QVBoxLayout()  # ✅ Do this first!
+    
+        # 🆕 Add buttons *after* defining self.config_layout
         btn_preselection = QPushButton("Aller à la présélection")
         btn_preselection.clicked.connect(self.launch_preselection_interface)
         btn_retour_interface = QPushButton("Retour à l'interface")
         btn_retour_interface.clicked.connect(self.return_to_main_interface)
-        
+    
         self.config_layout.addWidget(btn_preselection)
         self.config_layout.addWidget(btn_retour_interface)
-        self.config_layout = QVBoxLayout()
+    
         self.config_layout.addWidget(QLabel("Sélectionner un patient :"))
         self.config_layout.addWidget(self.patient_selector)
+    
+        # Retire prénom/nom ici si ce n’est plus utile
         self.contact_input = QLineEdit()
         self.contact_input.setPlaceholderText("Contacts de stimulation")
         self.intensite_input = QLineEdit()
         self.intensite_input.setPlaceholderText("Intensité (mA)")
         self.duree_input = QLineEdit()
         self.duree_input.setPlaceholderText("Durée (ms)")
-
+    
         self.mode_label = QLabel("Mode d'affichage des images :")
         self.mode_selector = QComboBox()
         self.mode_selector.addItems(["Image au clic", "Temps imparti", "Barre espace"])
         self.mode_selector.currentTextChanged.connect(self.toggle_timer_input)
-
+    
         self.timer_input = QLineEdit()
         self.timer_input.setPlaceholderText("Temps (en secondes)")
         self.timer_input.setVisible(False)
-
+    
         self.start_btn = QPushButton("Valider et Préparer le test")
         self.start_btn.clicked.connect(self.prepare_test)
-
+    
         self.stop_btn = QPushButton("Arrêter et sauvegarder")
         self.stop_btn.clicked.connect(self.end_session)
-
-        for widget in [self.contact_input, self.intensite_input, self.duree_input,
-                       self.mode_label, self.mode_selector, self.timer_input, self.start_btn, self.stop_btn]:
+    
+        for widget in [
+            self.contact_input, self.intensite_input, self.duree_input,
+            self.mode_label, self.mode_selector, self.timer_input,
+            self.start_btn, self.stop_btn
+        ]:
             self.config_layout.addWidget(widget)
-
+    
         self.image_layout = QHBoxLayout()
         self.image_panel = QWidget()
         self.image_panel.setLayout(self.image_layout)
-
+    
         self.main_layout.addLayout(self.config_layout)
         self.main_layout.addWidget(self.image_panel)
-
         self.central_widget.setLayout(self.main_layout)
 
     def launch_preselection_interface(self):
