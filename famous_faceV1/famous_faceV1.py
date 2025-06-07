@@ -203,6 +203,7 @@ class FamousFaceTest(QMainWindow):
             return
     
         try:
+            # Chemin vers le fichier selection.txt
             selection_path = self.patients_dir / patient_name / "selection.txt"
             if not selection_path.exists():
                 self.selected_triplets = []
@@ -210,21 +211,30 @@ class FamousFaceTest(QMainWindow):
                 return
     
             with open(selection_path, "r", encoding="utf-8") as f:
-                content = f.read().strip()
-                selections = [s.strip() for s in content.split(",") if s.strip()]
+                selections = [s.strip() for s in f.read().strip().split(",") if s.strip()]
     
-            prefixes = set("_".join(name.split("_")[:2]) for name in selections)
+            # Extraire les préfixes "image_X" depuis "image_X_0"
+            prefixes = set("_".join(s.split("_")[:2]) for s in selections)
     
-            self.selected_triplets = []
+            # Construire les triplets correspondants
+            triplets = []
             for prefix in prefixes:
-                triplet = [f"{prefix}_{i}.jpg" for i in range(3)]
-                if all(os.path.exists(os.path.join(self.image_folder, img)) for img in triplet):
-                    self.selected_triplets.append(triplet)
+                candidate = []
+                for i in range(3):
+                    for ext in [".jpg", ".jpeg", ".png"]:
+                        path = os.path.join(self.image_folder, f"{prefix}_{i}{ext}")
+                        if os.path.exists(path):
+                            candidate.append(f"{prefix}_{i}{ext}")
+                            break
+                if len(candidate) == 3:
+                    triplets.append(candidate)
     
+            self.selected_triplets = triplets
             self.selection_loaded = True if self.selected_triplets else False
+            print(f"✅ {len(self.selected_triplets)} triplets chargés pour le patient '{patient_name}'")
     
         except Exception as e:
-            print(f"❌ Erreur lors du chargement de la sélection : {e}")
+            print(f"❌ Erreur chargement sélection patient : {e}")
             self.selected_triplets = []
             self.selection_loaded = False
             
