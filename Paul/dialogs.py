@@ -29,5 +29,14 @@ class SelectionPatientDialog(QDialog):
         index = self.liste_widget.row(item)
         patient_id = self.patients[index][0]
         patient_name = self.patients[index][1]
-        self.callback(patient_id, patient_name)
+    
+        # Détermine combien d'arguments la fonction attend
+        arg_count = len(inspect.signature(self.callback).parameters)
+    
+        if arg_count == 1:
+            self.callback(patient_id)
+        else:
+            self.callback(patient_id, patient_name)
+    
         self.close()
+
