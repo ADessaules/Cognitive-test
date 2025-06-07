@@ -4,7 +4,9 @@ from PyQt6.QtCore import Qt
 import sqlite3
 import os
 import glob
-from constant import DOSSIER_IMAGES, DB_FILE
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from constant import DB_FILE, DOSSIER_PATIENTS
 
 class SelectionCelebrites(QDialog):
     def __init__(self, patient_id, patient_name):
