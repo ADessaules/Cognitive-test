@@ -105,7 +105,7 @@ class FamousFaceTest(QMainWindow):
         }
 
         from pathlib import Path
-        self.patients_dir = Path(__file__).resolve().parent.parent / "Paul" / "Patients"
+        self.patients_dir = Path(__file__).resolve().parent.parent / "Patients"
         self.patient_selector = QComboBox()
         self.patient_selector.addItem("-- Aucun --")
         for folder in self.patients_dir.iterdir():
@@ -219,7 +219,7 @@ class FamousFaceTest(QMainWindow):
         try:
             self.patient_window.close()
             self.close()
-            subprocess.Popen(["python", "famous_faceV1/main.py"])
+            subprocess.Popen(["python", "interface.py"])
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Impossible de retourner à l'interface principale : {e}")
         
