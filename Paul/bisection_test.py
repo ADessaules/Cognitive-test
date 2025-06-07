@@ -39,15 +39,26 @@ class BisectionTest(QWidget):
         self.patient_window.move(screen_patient.geometry().topLeft())
         self.patient_window.show()
 
-        self.label_message = QLabel("Appuyez sur ESPACE pour commencer le test", self.patient_window)
-        self.label_message.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.label_message.setFont(QFont("Arial", 20))
-        self.label_message.setGeometry(100, screen_patient.geometry().height() // 2 - 50,
-                                       screen_patient.geometry().width() - 200, 100)
-        self.label_message.show()
+        # # self.label_message = QLabel("Appuyez sur ESPACE pour commencer le test", self.patient_window)
+        # self.label_message.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # self.label_message.setFont(QFont("Arial", 20))
+        # self.label_message.setGeometry(100, screen_patient.geometry().height() // 2 - 50,
+        #                                screen_patient.geometry().width() - 200, 100)
+        # self.label_message.show()
 
         self.patient_window.setFocus()
         self.patient_window.setMouseTracking(True)
+
+        self.btn_start = QPushButton("Démarrer le test")
+        self.btn_start.setStyleSheet("font-size: 18px; background-color: green; color: white; padding: 5px;")
+        self.btn_start.clicked.connect(self.start_test)
+        layout.addWidget(self.btn_start)
+
+    def start_test(self):
+        self.btn_start.setEnabled(False)  # désactive le bouton après lancement
+        self.start_trial()
+
+
 
     def start_trial(self):
         if self.attempt == 0:
@@ -141,8 +152,8 @@ class PatientWindow(QWidget):
     def __init__(self, main_app):
         super().__init__()
         self.main_app = main_app
-        self.waiting_for_space = True
-        self.waiting_for_input = False
+        # self.waiting_for_space = True
+        self.waiting_for_input = True
         self.bar_cx = 0
         self.bar_cy = 0
 
@@ -164,12 +175,13 @@ class PatientWindow(QWidget):
         self.update()
 
     def paintEvent(self, event):
-        if self.waiting_for_space:
+        if not hasattr(self, 'x1') or not self.waiting_for_input:
             return
         painter = QPainter(self)
         pen = QPen(Qt.GlobalColor.black, 5)
         painter.setPen(pen)
         painter.drawLine(int(self.x1), int(self.y1), int(self.x2), int(self.y2))
+
 
     def mousePressEvent(self, event):
         if not self.waiting_for_input:
@@ -177,8 +189,8 @@ class PatientWindow(QWidget):
         self.waiting_for_input = False
         self.main_app.record_click(event.position().x(), event.position().y())
 
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key.Key_Space and self.waiting_for_space:
-            self.waiting_for_space = False
-            self.main_app.label_message.hide()
-            self.main_app.start_trial()
+    # def keyPressEvent(self, event):
+    #     if event.key() == Qt.Key.Key_Space and self.waiting_for_space:
+    #         self.waiting_for_space = False
+    #         self.main_app.label_message.hide()
+    #         self.main_app.start_trial()
