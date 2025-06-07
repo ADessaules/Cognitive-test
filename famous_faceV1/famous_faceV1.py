@@ -209,10 +209,12 @@ class FamousFaceTest(QMainWindow):
 
     def launch_preselection_interface(self):
         try:
+            self.patient_window.close()
+            self.close()  # ✅ Ferme la fenêtre du test
             subprocess.Popen(["python", "./Paul/main.py"])
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Impossible d'ouvrir l'interface de présélection : {e}")
-
+            
     def return_to_main_interface(self):
         try:
             self.patient_window.close()
