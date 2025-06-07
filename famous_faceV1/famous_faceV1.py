@@ -300,11 +300,6 @@ class FamousFaceTest(QMainWindow):
             self.show_triplet()
 
     def show_triplet(self):
-        if self.current_index >= len(self.current_triplets):
-            self.end_session()
-        return
-
-        print(f"🎯 Affichage du triplet {self.current_index + 1}/{len(self.current_triplets)}: {self.current_triplets[self.current_index]}")
         for layout in (self.image_layout, self.patient_window.image_layout):
             for i in reversed(range(layout.count())):
                 widget = layout.itemAt(i).widget()
