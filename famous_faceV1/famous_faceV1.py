@@ -193,24 +193,28 @@ class FamousFaceTest(QMainWindow):
             return
     
         try:
+            # Chemin du fichier selection.txt
             selection_path = self.patients_dir / patient_name / "selection.txt"
             if not selection_path.exists():
-                print("❌ Aucun fichier de sélection trouvé.")
                 self.selected_triplets = []
                 self.selection_loaded = False
                 return
     
+            # Lire le contenu du fichier
             with open(selection_path, "r", encoding="utf-8") as f:
-                lines = f.read().strip()
-                selections = lines.split(",") if lines else []
+                content = f.read().strip()
+                selections = [s.strip() for s in content.split(",") if s.strip()]
     
-            # Nettoyer les noms et filtrer les triplets valides
-            cleaned = [name.strip() for name in selections if name.strip() in self.triplet_map_by_index]
-            self.selected_triplets = [self.triplet_map_by_index[name] for name in cleaned]
-            self.selection_loaded = bool(self.selected_triplets)
+            # Construire les triplets correspondants
+            self.selected_triplets = [
+                self.triplet_map_by_index[img]
+                for img in selections
+                if img in self.triplet_map_by_index
+            ]
     
+            self.selection_loaded = True if self.selected_triplets else False
         except Exception as e:
-            print(f"❌ Erreur lecture fichier sélection.txt : {e}")
+            print(f"❌ Erreur lors du chargement de la sélection depuis le fichier : {e}")
             self.selected_triplets = []
             self.selection_loaded = False
             
