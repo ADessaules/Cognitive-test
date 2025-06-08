@@ -1,15 +1,12 @@
-import sys
-import os
-import random
-import time
-from datetime import datetime
-from pathlib import Path
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QPushButton,
     QVBoxLayout, QHBoxLayout, QLineEdit, QMessageBox, QComboBox
 )
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import QTimer, Qt
+from pathlib import Path
+from datetime import datetime
+import sys, os, random, time
 import pandas as pd
 
 
@@ -19,22 +16,33 @@ class PatientWindow(QWidget):
         self.setWindowTitle("Test en cours - Écran patient")
         self.setGeometry(920, 100, 800, 600)
         self.top_label = QLabel()
+        self.top_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
         self.bottom_layout = QHBoxLayout()
+        self.bottom_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
         layout = QVBoxLayout()
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.top_label)
         layout.addLayout(self.bottom_layout)
         self.setLayout(layout)
 
     def show_triplet(self, top_image_path, bottom_images, handlers):
-        pixmap_top = QPixmap(top_image_path).scaled(300, 300, Qt.AspectRatioMode.KeepAspectRatio)
+        pixmap_top = QPixmap(top_image_path).scaled(
+            250, 250, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+        )
         self.top_label.setPixmap(pixmap_top)
+
         for i in reversed(range(self.bottom_layout.count())):
             w = self.bottom_layout.itemAt(i).widget()
             if w:
                 w.setParent(None)
+
         for path, handler in zip(bottom_images, handlers):
             label = QLabel()
-            pixmap = QPixmap(path).scaled(200, 200, Qt.AspectRatioMode.KeepAspectRatio)
+            pixmap = QPixmap(path).scaled(
+                250, 250, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+            )
             label.setPixmap(pixmap)
             label.mousePressEvent = handler
             self.bottom_layout.addWidget(label)
@@ -45,7 +53,6 @@ class MatchingUnknownTest(QMainWindow):
         super().__init__()
         self.setWindowTitle("Matching Unknown Test - Expérimentateur")
         self.setGeometry(100, 100, 1200, 600)
-
         self.image_folder = os.path.join(os.path.dirname(__file__), "image_matching_unknown_faceV1")
         self.test_name = "matching_unknown"
 
@@ -69,43 +76,51 @@ class MatchingUnknownTest(QMainWindow):
     def init_ui(self):
         central = QWidget()
         self.setCentralWidget(central)
-        layout = QVBoxLayout()
+        layout = QHBoxLayout()
+
+        left_layout = QVBoxLayout()
 
         self.patient_selector = QComboBox()
         self.patient_selector.addItem("-- Aucun --")
         patients_path = Path(__file__).resolve().parent.parent / "Patients"
-        for folder in patients_path.iterdir():
-            if folder.is_dir():
-                self.patient_selector.addItem(folder.name)
+        if patients_path.exists():
+            for folder in patients_path.iterdir():
+                if folder.is_dir():
+                    self.patient_selector.addItem(folder.name)
 
-        self.contact_input = QLineEdit("Contacts de stimulation")
-        self.intensite_input = QLineEdit("Intensité (mA)")
-        self.duree_input = QLineEdit("Durée (ms)")
+        self.contact_input = QLineEdit()
+        self.contact_input.setPlaceholderText("Contacts de stimulation")
+        self.intensite_input = QLineEdit()
+        self.intensite_input.setPlaceholderText("Intensité (mA)")
+        self.duree_input = QLineEdit()
+        self.duree_input.setPlaceholderText("Durée (ms)")
 
         self.mode_selector = QComboBox()
         self.mode_selector.addItems(["Image au clic", "Temps imparti", "Barre espace"])
-        self.timer_input = QLineEdit("Temps (en secondes)")
+        self.timer_input = QLineEdit()
+        self.timer_input.setPlaceholderText("Temps (en secondes)")
         self.timer_input.setVisible(False)
-
         self.mode_selector.currentTextChanged.connect(lambda x: self.timer_input.setVisible(x == "Temps imparti"))
 
         start_btn = QPushButton("Valider et Préparer le test")
         start_btn.clicked.connect(self.start_test)
-
         stop_btn = QPushButton("Arrêter et sauvegarder")
         stop_btn.clicked.connect(self.save_results)
 
-        layout.addWidget(QLabel("Sélectionner un patient :"))
-        layout.addWidget(self.patient_selector)
-        layout.addWidget(self.contact_input)
-        layout.addWidget(self.intensite_input)
-        layout.addWidget(self.duree_input)
-        layout.addWidget(QLabel("Mode d'affichage des images :"))
-        layout.addWidget(self.mode_selector)
-        layout.addWidget(self.timer_input)
-        layout.addWidget(start_btn)
-        layout.addWidget(stop_btn)
+        for w in [
+            QLabel("Sélectionner un patient :"), self.patient_selector,
+            self.contact_input, self.intensite_input, self.duree_input,
+            QLabel("Mode d'affichage des images :"), self.mode_selector,
+            self.timer_input, start_btn, stop_btn
+        ]:
+            left_layout.addWidget(w)
 
+        self.image_layout = QHBoxLayout()
+        right_panel = QWidget()
+        right_panel.setLayout(self.image_layout)
+
+        layout.addLayout(left_layout)
+        layout.addWidget(right_panel)
         central.setLayout(layout)
 
     def start_test(self):
@@ -125,25 +140,30 @@ class MatchingUnknownTest(QMainWindow):
         self.show_next_triplet()
 
     def show_next_triplet(self):
+        for i in reversed(range(self.image_layout.count())):
+            w = self.image_layout.itemAt(i).widget()
+            if w:
+                w.setParent(None)
+
         if self.index >= len(self.shuffled_triplets):
             self.save_results()
             return
 
         triplet = self.shuffled_triplets[self.index]
         prefix = "_".join(triplet[0].split("_")[:2])
-        top = next(f for f in triplet if f.endswith("_0.jpg") or f.endswith("_0.png"))
-        correct = next(f for f in triplet if f.endswith("_1.jpg") or f.endswith("_1.png"))
-        distractor = next(f for f in triplet if f.endswith("_2.jpg") or f.endswith("_2.png"))
+        top = next(f for f in triplet if "_0" in f)
+        correct = next(f for f in triplet if "_1" in f)
+        distractor = next(f for f in triplet if "_2" in f)
 
         options = [correct, distractor]
         random.shuffle(options)
         is_correct_map = {img: (img == correct) for img in options}
 
-        start_time = time.time()
+        self.start_time = time.time()
 
         def make_handler(selected_img):
             def handler(event):
-                rt = round(time.time() - start_time, 3)
+                rt = round(time.time() - self.start_time, 3)
                 self.session_results.append({
                     "id_essai": self.index + 1,
                     "temps_reponse": rt,
@@ -154,8 +174,14 @@ class MatchingUnknownTest(QMainWindow):
                     "contact_stimulation": self.contact,
                     "intensité": self.intensite,
                     "durée": self.duree,
+                    "mode": self.mode,
                     "horodatage": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 })
+                for i, opt in enumerate(options):
+                    label = self.image_layout.itemAt(i).widget()
+                    color = "green" if is_correct_map[opt] else "red"
+                    if selected_img == opt:
+                        label.setStyleSheet(f"border: 4px solid {color}; margin: 5px;")
                 self.index += 1
                 QTimer.singleShot(500, self.show_next_triplet)
             return handler
@@ -164,7 +190,17 @@ class MatchingUnknownTest(QMainWindow):
         options_path = [os.path.join(self.image_folder, opt) for opt in options]
         handlers = [make_handler(opt) for opt in options]
 
+        # Affichage patient
         self.patient_window.show_triplet(top_path, options_path, handlers)
+
+        # Affichage expérimentateur
+        top_lbl = QLabel()
+        top_lbl.setPixmap(QPixmap(top_path).scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio))
+        self.image_layout.addWidget(top_lbl)
+        for path in options_path:
+            lbl = QLabel()
+            lbl.setPixmap(QPixmap(path).scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio))
+            self.image_layout.addWidget(lbl)
 
     def save_results(self):
         df = pd.DataFrame(self.session_results)
