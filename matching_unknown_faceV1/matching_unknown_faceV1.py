@@ -3,11 +3,23 @@ from PyQt6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QLineEdit, QMessageBox, QComboBox
 )
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtCore import QTimer, Qt
+from PyQt6.QtCore import QTimer, Qt, QEvent
 from pathlib import Path
 from datetime import datetime
 import sys, os, random, time
 import pandas as pd
+
+
+class WaitingScreen(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Écran d'attente")
+        self.setGeometry(920, 100, 800, 600)
+        layout = QVBoxLayout()
+        label = QLabel("Appuyez sur Espace pour démarrer le test")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(label)
+        self.setLayout(layout)
 
 
 class PatientWindow(QWidget):
@@ -57,11 +69,12 @@ class MatchingUnknownTest(QMainWindow):
         self.test_name = "matching_unknown"
 
         self.patient_window = PatientWindow()
-        self.patient_window.show()
+        self.waiting_screen = WaitingScreen()
         self.timer = QTimer()
 
         self.init_data()
         self.init_ui()
+        self.installEventFilter(self)
 
     def init_data(self):
         self.triplets = {}
@@ -103,7 +116,7 @@ class MatchingUnknownTest(QMainWindow):
         self.mode_selector.currentTextChanged.connect(lambda x: self.timer_input.setVisible(x == "Temps imparti"))
 
         start_btn = QPushButton("Valider et Préparer le test")
-        start_btn.clicked.connect(self.start_test)
+        start_btn.clicked.connect(self.prepare_test)
         stop_btn = QPushButton("Arrêter et sauvegarder")
         stop_btn.clicked.connect(self.save_results)
 
@@ -123,7 +136,7 @@ class MatchingUnknownTest(QMainWindow):
         layout.addWidget(right_panel)
         central.setLayout(layout)
 
-    def start_test(self):
+    def prepare_test(self):
         if self.patient_selector.currentText() == "-- Aucun --":
             QMessageBox.warning(self, "Erreur", "Veuillez choisir un patient.")
             return
@@ -137,7 +150,19 @@ class MatchingUnknownTest(QMainWindow):
 
         self.shuffled_triplets = random.sample(self.all_triplets, len(self.all_triplets))
         self.index = 0
-        self.show_next_triplet()
+        self.session_active = False
+        self.waiting_screen.show()
+        self.patient_window.show()
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setFocus()
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Type.KeyRelease and event.key() == Qt.Key.Key_Space:
+            if not self.session_active and self.waiting_screen.isVisible():
+                self.waiting_screen.hide()
+                self.session_active = True
+                self.show_next_triplet()
+        return super().eventFilter(obj, event)
 
     def show_next_triplet(self):
         for i in reversed(range(self.image_layout.count())):
