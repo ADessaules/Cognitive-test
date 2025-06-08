@@ -54,36 +54,6 @@ class MainApp(QWidget):
 
         
         self.setLayout(self.layout)
-    
-    def creer_patient(self):
-        nom, ok = QInputDialog.getText(self, "Nouveau Patient", "Entrez le nom du patient :")
-        if ok and nom:
-            # Nettoyage du nom pour qu'il soit valide comme nom de dossier
-            import re
-            nom_dossier = re.sub(r'[\\/*?:"<>|]', "_", nom).strip()
-
-            if not nom_dossier:
-                QMessageBox.warning(self, "Erreur", "Nom de patient invalide.")
-                return
-
-            # Insère dans la base de données
-            conn = sqlite3.connect(DB_FILE)
-            cursor = conn.cursor()
-            cursor.execute("INSERT INTO patients (nom) VALUES (?)", (nom,))
-            conn.commit()
-            conn.close()
-
-            # Créer le dossier du patient dans DOSSIER_PATIENTS
-            dossier_patient = os.path.join(DOSSIER_PATIENTS, nom_dossier)
-            try:
-                os.makedirs(dossier_patient, exist_ok=True)
-            except Exception as e:
-                QMessageBox.warning(self, "Erreur", f"Erreur lors de la création du dossier : {e}")
-                return
-
-            QMessageBox.information(self, "Patient créé", f"Le patient « {nom} » a bien été créé avec un dossier nommé « {nom_dossier} »")
-
-
 
     def afficher_liste_patients(self):
         self.liste_patients_fenetre = ListePatients()
