@@ -181,21 +181,22 @@ class MatchingUnknownTest(QMainWindow):
             w = self.image_layout.itemAt(i).widget()
             if w:
                 w.setParent(None)
-
+    
         if self.index >= len(self.shuffled_triplets):
             self.save_results()
             return
-
+    
         triplet = self.shuffled_triplets[self.index]
         prefix = "_".join(triplet[0].split("_")[:2])
-        top = next(f for f in triplet if "_0" in f)
-        correct = next(f for f in triplet if "_1" in f)
-        distractor = next(f for f in triplet if "_2" in f)
-
+    
+        # On trie les fichiers du triplet par leur suffixe numérique (_0, _1, _2)
+        sorted_triplet = sorted(triplet, key=lambda f: int(f.split("_")[2].split(".")[0]))
+        top, correct, distractor = sorted_triplet  # top=_0, correct=_1, distractor=_2
+    
         options = [correct, distractor]
         random.shuffle(options)
         is_correct_map = {img: (img == correct) for img in options}
-
+    
         self.start_time = time.time()
 
         def make_handler(selected_img):
