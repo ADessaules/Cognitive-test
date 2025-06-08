@@ -46,7 +46,7 @@ class MatchingUnknownTest(QMainWindow):
         self.setWindowTitle("Matching Unknown Test - Expérimentateur")
         self.setGeometry(100, 100, 1200, 600)
 
-        self.image_folder = os.path.join(os.path.dirname(__file__), "image_unknown_faceV1")
+        self.image_folder = os.path.join(os.path.dirname(__file__), "image_matching_unknown_faceV1")
         self.test_name = "matching_unknown"
 
         self.patient_window = PatientWindow()
