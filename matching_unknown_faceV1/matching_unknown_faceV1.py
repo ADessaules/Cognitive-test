@@ -8,6 +8,14 @@ from pathlib import Path
 from datetime import datetime
 import sys, os, random, time
 import pandas as pd
+import hashlib
+
+
+def hash_image(path):
+    """Hash d'une image pour vérifier si deux fichiers sont visuellement identiques"""
+    pixmap = QPixmap(path)
+    image_bytes = pixmap.toImage().bits().asstring(pixmap.width() * pixmap.height() * 4)
+    return hashlib.md5(image_bytes).hexdigest()
 
 
 class WaitingScreen(QWidget):
@@ -78,14 +86,18 @@ class MatchingUnknownTest(QMainWindow):
                 prefix = file.rsplit("_", 1)[0]
                 self.triplets.setdefault(prefix, []).append(file)
 
-        # Garder uniquement ceux avec _0, _1, _2 et fichiers tous différents
-        self.all_triplets = [
-            v for v in self.triplets.values()
-            if len(v) == 3 and all(
-                os.path.join(self.image_folder, f1) != os.path.join(self.image_folder, f2)
-                for f1 in v for f2 in v if f1 != f2
-            )
-        ]
+        valid_triplets = []
+        for triplet in self.triplets.values():
+            if len(triplet) != 3:
+                continue
+
+            paths = [os.path.join(self.image_folder, f) for f in triplet]
+            hashes = set(hash_image(p) for p in paths)
+
+            if len(hashes) == 3:
+                valid_triplets.append(triplet)
+
+        self.all_triplets = valid_triplets
         self.session_results = []
 
     def init_ui(self):
@@ -178,15 +190,15 @@ class MatchingUnknownTest(QMainWindow):
         correct = next((img for img in triplet if "_1" in img), None)
         distractor = next((img for img in triplet if "_2" in img), None)
 
-        if not top or not correct or not distractor or correct == distractor:
+        if not all([top, correct, distractor]):
             self.index += 1
             self.show_next_triplet()
             return
 
         bottom = [correct, distractor]
         random.shuffle(bottom)
-
         is_correct_map = {img: (img == correct) for img in bottom}
+
         top_path = os.path.join(self.image_folder, top)
         bottom_paths = [os.path.join(self.image_folder, img) for img in bottom]
 
@@ -215,7 +227,7 @@ class MatchingUnknownTest(QMainWindow):
         self.start_time = time.time()
         self.patient_window.show_triplet(top_path, bottom_paths, handlers)
 
-        # Affichage expérimentateur (triangle)
+        # Affichage expérimentateur
         top_lbl = QLabel()
         top_lbl.setPixmap(QPixmap(top_path).scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio))
         self.top_layout.addWidget(top_lbl)
