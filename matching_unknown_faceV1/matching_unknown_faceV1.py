@@ -1,21 +1,22 @@
+import sys, os, random, time, hashlib
+from pathlib import Path
+from datetime import datetime
+import pandas as pd
+
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QPushButton,
     QVBoxLayout, QHBoxLayout, QLineEdit, QMessageBox, QComboBox
 )
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import QTimer, Qt, QEvent
-from pathlib import Path
-from datetime import datetime
-import sys, os, random, time
-import pandas as pd
-import hashlib
 
 
 def hash_image(path):
-    """Hash d'une image pour vérifier si deux fichiers sont visuellement identiques"""
     pixmap = QPixmap(path)
-    image_bytes = pixmap.toImage().bits().asstring(pixmap.width() * pixmap.height() * 4)
-    return hashlib.md5(image_bytes).hexdigest()
+    img = pixmap.toImage()
+    ptr = img.bits()
+    ptr.setsize(img.sizeInBytes())
+    return hashlib.md5(ptr).hexdigest()
 
 
 class WaitingScreen(QWidget):
@@ -47,19 +48,18 @@ class PatientWindow(QWidget):
         layout.addLayout(self.bottom_layout)
         self.setLayout(layout)
 
-    def show_triplet(self, top_image_path, bottom_images, handlers):
-        self.top_label.setPixmap(QPixmap(top_image_path).scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio))
-
+    def show_triplet(self, top_path, bottom_paths, handlers):
+        self.top_label.setPixmap(QPixmap(top_path).scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio))
         for i in reversed(range(self.bottom_layout.count())):
             widget = self.bottom_layout.itemAt(i).widget()
             if widget:
                 widget.setParent(None)
 
-        for path, handler in zip(bottom_images, handlers):
-            label = QLabel()
-            label.setPixmap(QPixmap(path).scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio))
-            label.mousePressEvent = handler
-            self.bottom_layout.addWidget(label)
+        for path, handler in zip(bottom_paths, handlers):
+            lbl = QLabel()
+            lbl.setPixmap(QPixmap(path).scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio))
+            lbl.mousePressEvent = handler
+            self.bottom_layout.addWidget(lbl)
 
 
 class MatchingUnknownTest(QMainWindow):
@@ -90,10 +90,8 @@ class MatchingUnknownTest(QMainWindow):
         for triplet in self.triplets.values():
             if len(triplet) != 3:
                 continue
-
             paths = [os.path.join(self.image_folder, f) for f in triplet]
-            hashes = set(hash_image(p) for p in paths)
-
+            hashes = {hash_image(p) for p in paths}
             if len(hashes) == 3:
                 valid_triplets.append(triplet)
 
@@ -106,7 +104,6 @@ class MatchingUnknownTest(QMainWindow):
         layout = QHBoxLayout()
 
         left_layout = QVBoxLayout()
-
         self.patient_selector = QComboBox()
         self.patient_selector.addItem("-- Aucun --")
         patients_path = Path(__file__).resolve().parent.parent / "Patients"
@@ -123,7 +120,8 @@ class MatchingUnknownTest(QMainWindow):
         self.mode_selector.addItems(["Image au clic", "Temps imparti", "Barre espace"])
         self.timer_input = QLineEdit("5")
         self.timer_input.setVisible(False)
-        self.mode_selector.currentTextChanged.connect(lambda x: self.timer_input.setVisible(x == "Temps imparti"))
+        self.mode_selector.currentTextChanged.connect(
+            lambda x: self.timer_input.setVisible(x == "Temps imparti"))
 
         start_btn = QPushButton("Valider et Préparer le test")
         start_btn.clicked.connect(self.start_test)
@@ -165,8 +163,8 @@ class MatchingUnknownTest(QMainWindow):
         self.shuffled_triplets = random.sample(self.all_triplets, len(self.all_triplets))
         self.index = 0
         self.setFocus()
-        self.waiting_screen.show()
         self.patient_window.show()
+        self.waiting_screen.show()
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Type.KeyRelease and event.key() == Qt.Key.Key_Space and self.waiting_screen.isVisible():
@@ -186,10 +184,9 @@ class MatchingUnknownTest(QMainWindow):
             return
 
         triplet = self.shuffled_triplets[self.index]
-        top = next((img for img in triplet if "_0" in img), None)
-        correct = next((img for img in triplet if "_1" in img), None)
-        distractor = next((img for img in triplet if "_2" in img), None)
-
+        top = next((f for f in triplet if "_0" in f), None)
+        correct = next((f for f in triplet if "_1" in f), None)
+        distractor = next((f for f in triplet if "_2" in f), None)
         if not all([top, correct, distractor]):
             self.index += 1
             self.show_next_triplet()
@@ -198,9 +195,8 @@ class MatchingUnknownTest(QMainWindow):
         bottom = [correct, distractor]
         random.shuffle(bottom)
         is_correct_map = {img: (img == correct) for img in bottom}
-
         top_path = os.path.join(self.image_folder, top)
-        bottom_paths = [os.path.join(self.image_folder, img) for img in bottom]
+        bottom_paths = [os.path.join(self.image_folder, b) for b in bottom]
 
         def make_handler(selected_img):
             def handler(event):
@@ -222,19 +218,19 @@ class MatchingUnknownTest(QMainWindow):
                 QTimer.singleShot(500, self.show_next_triplet)
             return handler
 
-        handlers = [make_handler(img) for img in bottom]
+        handlers = [make_handler(b) for b in bottom]
 
         self.start_time = time.time()
         self.patient_window.show_triplet(top_path, bottom_paths, handlers)
 
-        # Affichage expérimentateur
+        # Affichage pour l'expérimentateur
         top_lbl = QLabel()
         top_lbl.setPixmap(QPixmap(top_path).scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio))
         self.top_layout.addWidget(top_lbl)
 
-        for img_path in bottom_paths:
+        for path in bottom_paths:
             lbl = QLabel()
-            lbl.setPixmap(QPixmap(img_path).scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio))
+            lbl.setPixmap(QPixmap(path).scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio))
             self.bottom_layout.addWidget(lbl)
 
     def save_results(self):
