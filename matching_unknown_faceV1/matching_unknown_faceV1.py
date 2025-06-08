@@ -81,10 +81,17 @@ class MatchingUnknownTest(QMainWindow):
         self.triplets = {}
         for file in os.listdir(self.image_folder):
             if file.lower().endswith(('.jpg', '.jpeg', '.png')):
-                prefix = "_".join(file.split("_")[:2])
+                prefix = file.rsplit("_", 1)[0]
                 self.triplets.setdefault(prefix, []).append(file)
-
-        self.all_triplets = [v for v in self.triplets.values() if len(v) == 3]
+    
+        # Ne garder que les triplets complets : un _0, un _1 et un _2
+        self.all_triplets = [
+            files for files in self.triplets.values()
+            if any("_0" in f for f in files) and
+               any("_1" in f for f in files) and
+               any("_2" in f for f in files)
+        ]
+    
         self.session_results = []
 
     def init_ui(self):
