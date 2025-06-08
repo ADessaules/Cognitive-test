@@ -10,6 +10,18 @@ import sys, os, random, time
 import pandas as pd
 
 
+class WaitingScreen(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Écran d'attente")
+        self.setGeometry(920, 100, 800, 600)
+        layout = QVBoxLayout()
+        label = QLabel("Appuyez sur Espace pour démarrer le test")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(label)
+        self.setLayout(layout)
+
+
 class PatientWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -58,7 +70,9 @@ class MatchingUnknownTest(QMainWindow):
 
         self.patient_window = PatientWindow()
         self.patient_window.show()
+        self.waiting_screen = WaitingScreen()
         self.timer = QTimer()
+        self.session_active = False
 
         self.init_data()
         self.init_ui()
@@ -115,7 +129,17 @@ class MatchingUnknownTest(QMainWindow):
         ]:
             left_layout.addWidget(w)
 
-        self.image_layout = QHBoxLayout()
+        # Expérimentateur layout (triangle : top + bottom)
+        self.image_layout = QVBoxLayout()
+        self.top_exp_label = QLabel()
+        self.top_exp_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.bottom_exp_layout = QHBoxLayout()
+        self.bottom_exp_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.image_layout.addWidget(self.top_exp_label)
+        self.image_layout.addLayout(self.bottom_exp_layout)
+
         right_panel = QWidget()
         right_panel.setLayout(self.image_layout)
 
@@ -131,19 +155,30 @@ class MatchingUnknownTest(QMainWindow):
         self.contact = self.contact_input.text().strip()
         self.intensite = self.intensite_input.text().strip()
         self.duree = self.duree_input.text().strip()
-
         self.mode = self.mode_selector.currentText()
         self.timer_duration = int(self.timer_input.text()) if self.mode == "Temps imparti" else 0
 
         self.shuffled_triplets = random.sample(self.all_triplets, len(self.all_triplets))
         self.index = 0
-        self.show_next_triplet()
+
+        self.waiting_screen.show()
+        self.patient_window.show()
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setFocus()
+
+    def keyReleaseEvent(self, event):
+        if event.key() == Qt.Key.Key_Space and self.waiting_screen.isVisible():
+            self.waiting_screen.hide()
+            self.session_active = True
+            self.index = 0
+            self.show_next_triplet()
 
     def show_next_triplet(self):
-        for i in reversed(range(self.image_layout.count())):
-            w = self.image_layout.itemAt(i).widget()
-            if w:
-                w.setParent(None)
+        for layout in [self.image_layout, self.bottom_exp_layout]:
+            for i in reversed(range(layout.count())):
+                w = layout.itemAt(i).widget()
+                if w:
+                    w.setParent(None)
 
         if self.index >= len(self.shuffled_triplets):
             self.save_results()
@@ -151,14 +186,12 @@ class MatchingUnknownTest(QMainWindow):
 
         triplet = self.shuffled_triplets[self.index]
         prefix = "_".join(triplet[0].split("_")[:2])
-        top = next(f for f in triplet if "_0" in f)
-        correct = next(f for f in triplet if "_1" in f)
-        distractor = next(f for f in triplet if "_2" in f)
+        top = [f for f in triplet if "_0" in f][0]
+        bottom = [f for f in triplet if "_1" in f or "_2" in f]
+        assert len(bottom) == 2
+        random.shuffle(bottom)
 
-        options = [correct, distractor]
-        random.shuffle(options)
-        is_correct_map = {img: (img == correct) for img in options}
-
+        is_correct_map = {img: "_1" in img for img in bottom}
         self.start_time = time.time()
 
         def make_handler(selected_img):
@@ -167,8 +200,8 @@ class MatchingUnknownTest(QMainWindow):
                 self.session_results.append({
                     "id_essai": self.index + 1,
                     "temps_reponse": rt,
-                    "image_choisie": "correct" if is_correct_map[selected_img] else "distracteur",
-                    "correct": is_correct_map[selected_img],
+                    "image_choisie": "correct" if "_1" in selected_img else "distracteur",
+                    "correct": "_1" in selected_img,
                     "triplet_nom": prefix,
                     "participant": self.patient_selector.currentText(),
                     "contact_stimulation": self.contact,
@@ -177,30 +210,23 @@ class MatchingUnknownTest(QMainWindow):
                     "mode": self.mode,
                     "horodatage": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 })
-                for i, opt in enumerate(options):
-                    label = self.image_layout.itemAt(i).widget()
-                    color = "green" if is_correct_map[opt] else "red"
-                    if selected_img == opt:
-                        label.setStyleSheet(f"border: 4px solid {color}; margin: 5px;")
                 self.index += 1
                 QTimer.singleShot(500, self.show_next_triplet)
             return handler
 
         top_path = os.path.join(self.image_folder, top)
-        options_path = [os.path.join(self.image_folder, opt) for opt in options]
-        handlers = [make_handler(opt) for opt in options]
+        options_path = [os.path.join(self.image_folder, opt) for opt in bottom]
+        handlers = [make_handler(opt) for opt in bottom]
 
         # Affichage patient
         self.patient_window.show_triplet(top_path, options_path, handlers)
 
         # Affichage expérimentateur
-        top_lbl = QLabel()
-        top_lbl.setPixmap(QPixmap(top_path).scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio))
-        self.image_layout.addWidget(top_lbl)
+        self.top_exp_label.setPixmap(QPixmap(top_path).scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio))
         for path in options_path:
             lbl = QLabel()
             lbl.setPixmap(QPixmap(path).scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio))
-            self.image_layout.addWidget(lbl)
+            self.bottom_exp_layout.addWidget(lbl)
 
     def save_results(self):
         df = pd.DataFrame(self.session_results)
