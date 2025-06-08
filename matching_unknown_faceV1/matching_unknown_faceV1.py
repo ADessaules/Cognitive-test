@@ -29,9 +29,11 @@ class PatientWindow(QWidget):
         self.setWindowTitle("Test en cours - Écran patient")
         self.setGeometry(920, 100, 800, 600)
         self.top_label = QLabel(alignment=Qt.AlignmentFlag.AlignCenter)
-        self.bottom_layout = QHBoxLayout(alignment=Qt.AlignmentFlag.AlignCenter)
+        self.bottom_layout = QHBoxLayout()
+        self.bottom_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        layout = QVBoxLayout(alignment=Qt.AlignmentFlag.AlignCenter)
+        layout = QVBoxLayout()
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.top_label)
         layout.addLayout(self.bottom_layout)
         self.setLayout(layout)
