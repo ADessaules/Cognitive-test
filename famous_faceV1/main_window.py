@@ -9,6 +9,7 @@ from liste_patients import ListePatients
 from preselection_celeb import SelectionCelebrites
 from dialogs import SelectionPatientDialog
 from bisection_test import BisectionTest
+from creation_patient import creer_patient
 
 class MainApp(QWidget):
     def __init__(self):
@@ -40,7 +41,7 @@ class MainApp(QWidget):
 
 
         self.btn_selection_celeb.clicked.connect(self.selectionner_patient_pour_celebrite) 
-        self.btn_creer_patient.clicked.connect(self.creer_patient)
+        self.btn_creer_patient.clicked.connect(lambda: creer_patient(self))
         self.btn_liste_patients.clicked.connect(self.afficher_liste_patients)
         self.btn_supprimer_patient.clicked.connect(self.afficher_liste_patients_supprimer)
         self.btn_bisection.clicked.connect(self.selectionner_patient_pour_bisection)        
