@@ -2,6 +2,9 @@ import sys
 import subprocess
 from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QLabel, QWidget, QPushButton, QStackedWidget, QListWidget
 from PyQt6.QtCore import Qt
+from famous_faceV1.creation_patient import creer_patient
+from constant import DB_FILE, DOSSIER_PATIENTS
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -31,9 +34,14 @@ class MainWindow(QMainWindow):
         btn_tests.setStyleSheet("font-size: 20px; padding: 15px;")
         btn_tests.clicked.connect(lambda: self.stack.setCurrentIndex(1))
 
-        layout.addWidget(title)
-        layout.addWidget(btn_tests)
+        btn_creer_patient = QPushButton("Créer un patient")
+        btn_creer_patient.setStyleSheet("font-size: 20px; padding: 15px;")
+        btn_creer_patient.clicked.connect(lambda: creer_patient(self))
 
+        layout.addWidget(title)
+        layout.addWidget(btn_creer_patient)
+        layout.addWidget(btn_tests)
+        
         page = QWidget()
         page.setLayout(layout)
         return page

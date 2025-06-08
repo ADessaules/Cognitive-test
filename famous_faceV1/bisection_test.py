@@ -1,5 +1,5 @@
-from PyQt6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QMessageBox, QLabel, QApplication,QHBoxLayout
-from PyQt6.QtGui import QPainter, QPen, QFont
+from PyQt6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QMessageBox, QLabel, QApplication, QHBoxLayout
+from PyQt6.QtGui import QPainter, QPen
 from PyQt6.QtCore import Qt, QTimer
 import sqlite3
 import random
@@ -17,11 +17,11 @@ class BisectionTest(QWidget):
         self.attempt = 0
         self.total_attempts = 10
         self.trial_data = []
+        self.stimulation_active = False
 
         self.start_time = None
         self.trial_start_time = None
 
-        # Fenêtre expérimentateur 
         self.setGeometry(screen_experimenter.geometry())
         self.move(screen_experimenter.geometry().topLeft())
 
@@ -33,14 +33,21 @@ class BisectionTest(QWidget):
         self.btn_start.setStyleSheet("font-size: 18px; background-color: green; color: white; padding: 5px;")
         self.btn_start.clicked.connect(self.start_test)
 
+        self.btn_toggle_stimulation = QPushButton("Activer la stimulation")
+        self.btn_toggle_stimulation.setStyleSheet("font-size: 16px; padding: 5px;")
+        self.btn_toggle_stimulation.clicked.connect(self.toggle_stimulation)
+
+        self.label_stimulation = QLabel("Stimulation: inactive")
+        self.label_stimulation.setStyleSheet("font-size: 16px; color: blue;")
+
         self.preview = PreviewWidget()
 
-        # Layout principal vertical
         layout = QVBoxLayout()
         layout.addWidget(self.btn_stop)
         layout.addWidget(self.btn_start)
+        layout.addWidget(self.btn_toggle_stimulation)
+        layout.addWidget(self.label_stimulation)
 
-        # Layout horizontal pour centrer la preview
         hbox = QHBoxLayout()
         hbox.addStretch()
         hbox.addWidget(self.preview)
@@ -49,7 +56,6 @@ class BisectionTest(QWidget):
 
         self.setLayout(layout)
 
-        # Fenêtre patient sur l'autre écran
         self.patient_window = PatientWindow(self)
         self.patient_window.setGeometry(screen_patient.geometry())
         self.patient_window.move(screen_patient.geometry().topLeft())
@@ -58,8 +64,19 @@ class BisectionTest(QWidget):
         self.patient_window.setFocus()
         self.patient_window.setMouseTracking(True)
 
+    def toggle_stimulation(self):
+        self.stimulation_active = not self.stimulation_active
+        if self.stimulation_active:
+            self.label_stimulation.setText("Stimulation: ACTIVE")
+            self.label_stimulation.setStyleSheet("font-size: 16px; color: red;")
+            self.btn_toggle_stimulation.setText("Désactiver la stimulation")
+        else:
+            self.label_stimulation.setText("Stimulation: inactive")
+            self.label_stimulation.setStyleSheet("font-size: 16px; color: blue;")
+            self.btn_toggle_stimulation.setText("Activer la stimulation")
+
     def start_test(self):
-        self.btn_start.setEnabled(False)  # désactive le bouton après lancement
+        self.btn_start.setEnabled(False)
         self.start_trial()
 
     def start_trial(self):
@@ -104,10 +121,10 @@ class BisectionTest(QWidget):
             "Centre X (cx)": round(self.patient_window.bar_cx, 2),
             "Centre Y (cy)": round(self.patient_window.bar_cy, 2),
             "Clic X": round(clic_x, 2) if clic_x is not None else "NA",
-            "Clic Y": round(clic_y, 2) if clic_y is not None else "NA"
+            "Clic Y": round(clic_y, 2) if clic_y is not None else "NA",
+            "Stimulation": "active" if self.stimulation_active else "inactive"
         })
 
-        # Sauvegarde en base
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
         cursor.execute("""
@@ -162,7 +179,6 @@ class PatientWindow(QWidget):
     def __init__(self, main_app):
         super().__init__()
         self.main_app = main_app
-        # self.waiting_for_space = True
         self.waiting_for_input = True
         self.bar_cx = 0
         self.bar_cy = 0
@@ -192,7 +208,6 @@ class PatientWindow(QWidget):
         painter.setPen(pen)
         painter.drawLine(int(self.x1), int(self.y1), int(self.x2), int(self.y2))
 
-
     def mousePressEvent(self, event):
         if not self.waiting_for_input:
             return
@@ -207,7 +222,6 @@ class PreviewWidget(QWidget):
 
         self.frame_width = 280
         self.frame_height = 160
-
         self.frame_x = (self.width() - self.frame_width) // 2
         self.frame_y = 20
 
@@ -224,7 +238,6 @@ class PreviewWidget(QWidget):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-
         pen_frame = QPen(Qt.GlobalColor.black, 3)
         painter.setPen(pen_frame)
         painter.drawRect(self.frame_x, self.frame_y, self.frame_width, self.frame_height)
