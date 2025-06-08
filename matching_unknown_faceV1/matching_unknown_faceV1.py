@@ -73,7 +73,8 @@ class MatchingUnknownTest(QMainWindow):
 
         self.patient_selector = QComboBox()
         self.patient_selector.addItem("-- Aucun --")
-        for folder in Path("Patients").iterdir():
+        patients_path = Path(__file__).resolve().parent.parent / "Patients"
+        for folder in patients_path.iterdir():
             if folder.is_dir():
                 self.patient_selector.addItem(folder.name)
 
