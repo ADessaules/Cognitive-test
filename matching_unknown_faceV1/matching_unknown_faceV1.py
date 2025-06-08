@@ -193,13 +193,21 @@ class MatchingUnknownTest(QMainWindow):
 
         triplet = self.shuffled_triplets[self.index]
         prefix = "_".join(triplet[0].split("_")[:2])
-        top = [f for f in triplet if "_0" in f][0]
+        
+        top_list = [f for f in triplet if "_0" in f]
+        if not top_list:
+            print(f"❌ Triplet mal formé ignoré (haut manquant): {triplet}")
+            self.index += 1
+            self.show_next_triplet()
+            return
+        top = top_list[0]
+        
         bottom = [f for f in triplet if "_1" in f or "_2" in f]
-        assert len(bottom) == 2
-        random.shuffle(bottom)
-
-        is_correct_map = {img: "_1" in img for img in bottom}
-        self.start_time = time.time()
+        if len(bottom) != 2:
+            print(f"❌ Triplet mal formé ignoré (bas): {triplet}")
+            self.index += 1
+            self.show_next_triplet()
+            return
 
         def make_handler(selected_img):
             def handler(event):
