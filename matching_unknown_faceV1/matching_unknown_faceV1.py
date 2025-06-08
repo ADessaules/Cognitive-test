@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QPushButton,
-    QVBoxLayout, QHBoxLayout, QLineEdit, QMessageBox, QComboBox
+    QVBoxLayout, QHBoxLayout, QLineEdit, QMessageBox, QComboBox, QGridLayout
 )
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import QTimer, Qt, QEvent
@@ -67,10 +67,9 @@ class MatchingUnknownTest(QMainWindow):
         self.setGeometry(100, 100, 1200, 600)
         self.image_folder = os.path.join(os.path.dirname(__file__), "image_matching_unknown_faceV1")
         self.test_name = "matching_unknown"
-
-        self.patient_window = PatientWindow()
-        self.waiting_screen = WaitingScreen()
         self.timer = QTimer()
+        self.patient_window = None
+        self.waiting_screen = None
 
         self.init_data()
         self.init_ui()
@@ -85,7 +84,7 @@ class MatchingUnknownTest(QMainWindow):
                     continue
                 prefix = "_".join(prefix_parts[:2])
                 self.triplets.setdefault(prefix, []).append(file)
-    
+
         self.all_triplets = []
         for prefix, files in self.triplets.items():
             files_dict = {f.split("_")[2].split(".")[0]: f for f in files}
@@ -95,14 +94,13 @@ class MatchingUnknownTest(QMainWindow):
                 print(f"✔ Triplet validé : {triplet}")
             else:
                 print(f"❌ Triplet invalide ignoré pour le préfixe {prefix} : {files}")
-    
+
         self.session_results = []
 
     def init_ui(self):
         central = QWidget()
         self.setCentralWidget(central)
         layout = QHBoxLayout()
-
         left_layout = QVBoxLayout()
 
         self.patient_selector = QComboBox()
@@ -132,15 +130,13 @@ class MatchingUnknownTest(QMainWindow):
         stop_btn = QPushButton("Arrêter et sauvegarder")
         stop_btn.clicked.connect(self.save_results)
 
-        for w in [
-            QLabel("Sélectionner un patient :"), self.patient_selector,
-            self.contact_input, self.intensite_input, self.duree_input,
-            QLabel("Mode d'affichage des images :"), self.mode_selector,
-            self.timer_input, start_btn, stop_btn
-        ]:
+        for w in [QLabel("Sélectionner un patient :"), self.patient_selector,
+                  self.contact_input, self.intensite_input, self.duree_input,
+                  QLabel("Mode d'affichage des images :"), self.mode_selector,
+                  self.timer_input, start_btn, stop_btn]:
             left_layout.addWidget(w)
 
-        self.image_layout = QHBoxLayout()
+        self.image_layout = QGridLayout()
         right_panel = QWidget()
         right_panel.setLayout(self.image_layout)
 
@@ -149,8 +145,12 @@ class MatchingUnknownTest(QMainWindow):
         central.setLayout(layout)
 
     def prepare_test(self):
-        if self.patient_selector.currentText() == "-- Aucun --":
-            QMessageBox.warning(self, "Erreur", "Veuillez choisir un patient.")
+        if self.patient_selector.currentText() == "-- Aucun --" or not all([
+            self.contact_input.text().strip(),
+            self.intensite_input.text().strip(),
+            self.duree_input.text().strip()
+        ]):
+            QMessageBox.warning(self, "Erreur", "Veuillez remplir tous les champs et choisir un patient.")
             return
 
         self.contact = self.contact_input.text().strip()
@@ -158,11 +158,15 @@ class MatchingUnknownTest(QMainWindow):
         self.duree = self.duree_input.text().strip()
 
         self.mode = self.mode_selector.currentText()
-        self.timer_duration = int(self.timer_input.text()) if self.mode == "Temps imparti" else 0
+        self.timer_duration = int(self.timer_input.text()) if self.mode == "Temps imparti" and self.timer_input.text().isdigit() else 0
 
         self.shuffled_triplets = random.sample(self.all_triplets, len(self.all_triplets))
         self.index = 0
+        self.session_results = []
         self.session_active = False
+
+        self.patient_window = PatientWindow()
+        self.waiting_screen = WaitingScreen()
         self.waiting_screen.show()
         self.patient_window.show()
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -170,7 +174,7 @@ class MatchingUnknownTest(QMainWindow):
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Type.KeyRelease and event.key() == Qt.Key.Key_Space:
-            if not self.session_active and self.waiting_screen.isVisible():
+            if not self.session_active and self.waiting_screen and self.waiting_screen.isVisible():
                 self.waiting_screen.hide()
                 self.session_active = True
                 self.show_next_triplet()
@@ -181,22 +185,18 @@ class MatchingUnknownTest(QMainWindow):
             w = self.image_layout.itemAt(i).widget()
             if w:
                 w.setParent(None)
-    
+
         if self.index >= len(self.shuffled_triplets):
             self.save_results()
             return
-    
+
         triplet = self.shuffled_triplets[self.index]
-        prefix = "_".join(triplet[0].split("_")[:2])
-    
-        # On trie les fichiers du triplet par leur suffixe numérique (_0, _1, _2)
         sorted_triplet = sorted(triplet, key=lambda f: int(f.split("_")[2].split(".")[0]))
-        top, correct, distractor = sorted_triplet  # top=_0, correct=_1, distractor=_2
-    
+        top, correct, distractor = sorted_triplet
+
         options = [correct, distractor]
         random.shuffle(options)
         is_correct_map = {img: (img == correct) for img in options}
-    
         self.start_time = time.time()
 
         def make_handler(selected_img):
@@ -207,7 +207,7 @@ class MatchingUnknownTest(QMainWindow):
                     "temps_reponse": rt,
                     "image_choisie": "correct" if is_correct_map[selected_img] else "distracteur",
                     "correct": is_correct_map[selected_img],
-                    "triplet_nom": prefix,
+                    "triplet_nom": top.split("_")[1],
                     "participant": self.patient_selector.currentText(),
                     "contact_stimulation": self.contact,
                     "intensité": self.intensite,
@@ -216,7 +216,7 @@ class MatchingUnknownTest(QMainWindow):
                     "horodatage": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 })
                 for i, opt in enumerate(options):
-                    label = self.image_layout.itemAt(i).widget()
+                    label = self.image_layout.itemAtPosition(1, i).widget()
                     color = "green" if is_correct_map[opt] else "red"
                     if selected_img == opt:
                         label.setStyleSheet(f"border: 4px solid {color}; margin: 5px;")
@@ -228,17 +228,16 @@ class MatchingUnknownTest(QMainWindow):
         options_path = [os.path.join(self.image_folder, opt) for opt in options]
         handlers = [make_handler(opt) for opt in options]
 
-        # Affichage patient
         self.patient_window.show_triplet(top_path, options_path, handlers)
 
-        # Affichage expérimentateur
+        # Affichage triangle sur interface expérimentateur
         top_lbl = QLabel()
         top_lbl.setPixmap(QPixmap(top_path).scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio))
-        self.image_layout.addWidget(top_lbl)
-        for path in options_path:
+        self.image_layout.addWidget(top_lbl, 0, 0, 1, 2, alignment=Qt.AlignmentFlag.AlignCenter)
+        for i, path in enumerate(options_path):
             lbl = QLabel()
             lbl.setPixmap(QPixmap(path).scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio))
-            self.image_layout.addWidget(lbl)
+            self.image_layout.addWidget(lbl, 1, i)
 
     def save_results(self):
         df = pd.DataFrame(self.session_results)
@@ -250,9 +249,17 @@ class MatchingUnknownTest(QMainWindow):
         df.to_excel(filename, index=False)
         QMessageBox.information(self, "Fin", f"Test terminé. Fichier sauvegardé : {filename}")
 
+        # Fermer les fenêtres associées
+        if self.patient_window:
+            self.patient_window.close()
+        if self.waiting_screen:
+            self.waiting_screen.close()
+        self.session_active = False
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MatchingUnknownTest()
     window.show()
     sys.exit(app.exec())
+
