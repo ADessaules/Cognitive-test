@@ -80,10 +80,22 @@ class MatchingUnknownTest(QMainWindow):
         self.triplets = {}
         for file in os.listdir(self.image_folder):
             if file.lower().endswith(('.jpg', '.jpeg', '.png')):
-                prefix = "_".join(file.split("_")[:2])
+                prefix_parts = file.split("_")
+                if len(prefix_parts) < 3:
+                    continue
+                prefix = "_".join(prefix_parts[:2])
                 self.triplets.setdefault(prefix, []).append(file)
-
-        self.all_triplets = [v for v in self.triplets.values() if len(v) == 3]
+    
+        self.all_triplets = []
+        for prefix, files in self.triplets.items():
+            files_dict = {f.split("_")[2].split(".")[0]: f for f in files}
+            if all(k in files_dict for k in ["0", "1", "2"]):
+                triplet = [files_dict["0"], files_dict["1"], files_dict["2"]]
+                self.all_triplets.append(triplet)
+                print(f"✔ Triplet validé : {triplet}")
+            else:
+                print(f"❌ Triplet invalide ignoré pour le préfixe {prefix} : {files}")
+    
         self.session_results = []
 
     def init_ui(self):
