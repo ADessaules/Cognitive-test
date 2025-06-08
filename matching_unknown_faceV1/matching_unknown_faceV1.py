@@ -78,9 +78,13 @@ class MatchingUnknownTest(QMainWindow):
                 prefix = file.rsplit("_", 1)[0]
                 self.triplets.setdefault(prefix, []).append(file)
 
+        # Garder uniquement ceux avec _0, _1, _2 et fichiers tous différents
         self.all_triplets = [
             v for v in self.triplets.values()
-            if any("_0" in f for f in v) and any("_1" in f for f in v) and any("_2" in f for f in v)
+            if len(v) == 3 and all(
+                os.path.join(self.image_folder, f1) != os.path.join(self.image_folder, f2)
+                for f1 in v for f2 in v if f1 != f2
+            )
         ]
         self.session_results = []
 
@@ -173,6 +177,12 @@ class MatchingUnknownTest(QMainWindow):
         top = next((img for img in triplet if "_0" in img), None)
         correct = next((img for img in triplet if "_1" in img), None)
         distractor = next((img for img in triplet if "_2" in img), None)
+
+        if not top or not correct or not distractor or correct == distractor:
+            self.index += 1
+            self.show_next_triplet()
+            return
+
         bottom = [correct, distractor]
         random.shuffle(bottom)
 
