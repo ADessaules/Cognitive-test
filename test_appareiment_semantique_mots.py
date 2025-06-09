@@ -1,7 +1,16 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, QMessageBox, QListWidget, QListWidgetItem, QDialog, QDialogButtonBox, QScrollArea
-from PyQt6.QtCore import Qt
+import random
+import time
+import datetime
+import pandas as pd
+from pathlib import Path
+from PyQt6.QtWidgets import (
+    QMainWindow, QComboBox, QLineEdit, QGridLayout, QApplication, QWidget, QLabel,
+    QPushButton, QVBoxLayout, QMessageBox, QHBoxLayout
+)
+from PyQt6.QtCore import Qt, QTimer, QEvent
 
+# === Triplets de test ===
 tests = [
     ("souris", "chien", "chat"),
     ("balais", "aspirateur", "cintre"),
@@ -77,149 +86,239 @@ tests = [
     ("marteau", "vis", "clou"),
     ("rhinocéros", "lion", "chat"),
     ("moto", "costume", "blouson"),
-    ("écureuil", "maïs", "gland")]
+    ("écureuil", "maïs", "gland")
+]
 
-
-class SemanticMatching(QWidget):
-    def __init__(self, tests):
+class WaitingScreen(QWidget):
+    def __init__(self):
         super().__init__()
-        self.setWindowTitle("Test Appariement Sémantique")
-        self.setGeometry(100, 100, 400, 300)
-
-        self.tests = tests
-        self.current_index = 0
-        self.responses = []
-
-        self.label_test_word = QLabel("", alignment = Qt.AlignmentFlag.AlignCenter)
-        self.label_test_word.setStyleSheet("font-size: 24px; margin: 20px;")
-
-        self.button_choice_1 = QPushButton("")
-        self.button_choice_2 = QPushButton("")
-        self.button_choice_1.setStyleSheet("font-size: 18px; padding: 15px;")
-        self.button_choice_2.setStyleSheet("font-size: 18px; padding: 15px;")
-
-        self.button_choice_1.clicked.connect(lambda: self.reccord_response(0))
-        self.button_choice_2.clicked.connect(lambda: self.reccord_response(1))
-
+        self.setWindowTitle("\u00c9cran d'attente")
+        self.setGeometry(920, 100, 800, 600)
         layout = QVBoxLayout()
-        layout.addWidget(self.label_test_word)
-        layout.addWidget(self.button_choice_1)
-        layout.addWidget(self.button_choice_2)
+        label = QLabel("Appuyez sur Espace pour d\u00e9marrer le test")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(label)
         self.setLayout(layout)
 
-        self.load_next_test()
+class SemanticMatchingPatient(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Test Appariement S\u00e9mantique - Patient")
+        self.setGeometry(920, 100, 800, 600)
+        self.word_label = QLabel("", alignment=Qt.AlignmentFlag.AlignCenter)
+        self.word_label.setStyleSheet("font-size: 28px; margin: 20px;")
 
-    def load_next_test(self):
-        if self.current_index < len(self.tests):  # ⚠️ ici on utilise bien self.tests
-            test_word, choice1, choice2 = self.tests[self.current_index]
-            self.label_test_word.setText(f"Mot test : {test_word}")
-            self.button_choice_1.setText(choice1)
-            self.button_choice_2.setText(choice2)
-        else:
-            self.end_test()
+        self.btn1 = QPushButton("")
+        self.btn2 = QPushButton("")
+        for btn in (self.btn1, self.btn2):
+            btn.setStyleSheet("font-size: 20px; padding: 15px;")
 
-
-    def reccord_response(self,choice_index):
-        if self.current_index < len(self.tests):
-            test = self.tests[self.current_index]
-            selected_word = test[1 + choice_index]
-            self.responses.append({
-                "test_word": test[0],
-                "choice1": test[1],
-                "choice2": test[2],
-                "selected": selected_word
-            })
-            self.current_index += 1
-            self.load_next_test()
-
-    def end_test(self):
-        recap = "Test terminé !\n\n Les Réponses :\n\n"
-        for r in self.responses:
-            recap += f"- Mot : {r['test_word']}\n -> {r['choice1']} | {r['choice2']} -> Réponse : {r['selected']}\n\n"
-        # Crée un QDialog personnalisé avec scroll
-        recap_dialog = QDialog(self)
-        recap_dialog.setWindowTitle("Résultats du test")
         layout = QVBoxLayout()
+        layout.addWidget(self.word_label)
+        layout.addWidget(self.btn1)
+        layout.addWidget(self.btn2)
+        self.setLayout(layout)
 
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
+    def show_triplet(self, test_word, options, handlers):
+        self.word_label.setText(test_word)
+        self.btn1.setText(options[0])
+        self.btn2.setText(options[1])
 
-        content = QWidget()
-        content_layout = QVBoxLayout()
-        label = QLabel(recap)
-        label.setWordWrap(True)
-        content_layout.addWidget(label)
-        content.setLayout(content_layout)
+        self.btn1.clicked.disconnect()
+        self.btn2.clicked.disconnect()
 
-        scroll.setWidget(content)
-        layout.addWidget(scroll)
+        self.btn1.clicked.connect(handlers[0])
+        self.btn2.clicked.connect(handlers[1])
 
-        # Boutons Oui / Non
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Yes | QDialogButtonBox.StandardButton.No)
-        buttons.button(QDialogButtonBox.StandardButton.Yes).setText("Repasser certains items")
-        buttons.button(QDialogButtonBox.StandardButton.No).setText("Quitter")
+class SemanticMatchingExaminateur(QMainWindow):
+    def __init__(self, test_triplets):
+        super().__init__()
+        self.setWindowTitle("Test Appariement S\u00e9mantique - Exp\u00e9rimentateur")
+        self.setGeometry(100, 100, 1200, 600)
+        self.test_triplets = test_triplets
+        self.test_name = "matching_words"
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.advance_by_timer)
 
-        buttons.accepted.connect(recap_dialog.accept)
-        buttons.rejected.connect(recap_dialog.reject)
+        self.init_ui()
+        self.installEventFilter(self)
 
-        layout.addWidget(buttons)
-        recap_dialog.setLayout(layout)
-        recap_dialog.resize(500, 400)
+    def init_ui(self):
+        central = QWidget()
+        self.setCentralWidget(central)
+        layout = QHBoxLayout()
+        left_layout = QVBoxLayout()
 
-        if recap_dialog.exec():
-            self.select_item_to_retry()
-        else:
-            self.close()
+        self.patient_selector = QComboBox()
+        self.patient_selector.addItem("-- Aucun --")
+        patients_path = Path(__file__).resolve().parent.parent / "Patients"
+        if patients_path.exists():
+            for folder in patients_path.iterdir():
+                if folder.is_dir():
+                    self.patient_selector.addItem(folder.name)
 
-    def select_item_to_retry(self):
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Repasser certains items")
-        layout = QVBoxLayout()
+        self.contact_input = QLineEdit()
+        self.contact_input.setPlaceholderText("Contacts de stimulation")
+        self.intensite_input = QLineEdit()
+        self.intensite_input.setPlaceholderText("Intensit\u00e9 (mA)")
+        self.duree_input = QLineEdit()
+        self.duree_input.setPlaceholderText("Dur\u00e9e (ms)")
 
-        list_widget = QListWidget()
-        list_widget.setMinimumHeight(200)
-        list_widget.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.mode_selector = QComboBox()
+        self.mode_selector.addItems(["Image au clic", "Temps imparti", "Barre espace"])
+        self.timer_input = QLineEdit()
+        self.timer_input.setPlaceholderText("Temps (en secondes)")
+        self.timer_input.setVisible(False)
+        self.mode_selector.currentTextChanged.connect(lambda x: self.timer_input.setVisible(x == "Temps imparti"))
 
-        self.items_map = {}
-        for i, r in enumerate(self.responses):
-            item_text = f"{r['test_word']} -> {r['selected']}"
-            item = QListWidgetItem(item_text)
-            item.setCheckState(Qt.CheckState.Unchecked)
-            list_widget.addItem(item)
-            self.items_map[i] = r  # mappe l'index de l'affichage à la réponse
+        start_btn = QPushButton("Valider et Pr\u00e9parer le test")
+        start_btn.clicked.connect(self.prepare_test)
+        stop_btn = QPushButton("Arr\u00eater et sauvegarder")
+        stop_btn.clicked.connect(self.save_results)
 
-        layout.addWidget(QLabel("Sélectionnez les items que vous souhaitez faire repasser :"))
-        layout.addWidget(list_widget)
+        for w in [QLabel("S\u00e9lectionner un patient :"), self.patient_selector,
+                  self.contact_input, self.intensite_input, self.duree_input,
+                  QLabel("Mode de test :"), self.mode_selector,
+                  self.timer_input, start_btn, stop_btn]:
+            left_layout.addWidget(w)
 
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        buttons.accepted.connect(dialog.accept)
-        buttons.rejected.connect(dialog.reject)
-        layout.addWidget(buttons)
+        self.status_label = QLabel("En attente du d\u00e9marrage du test…")
+        left_layout.addWidget(self.status_label)
 
-        dialog.setLayout(layout)
+        self.right_layout = QVBoxLayout()
 
-        if dialog.exec():
-            items_to_retry = []
-            for i in range(list_widget.count()):
-                item = list_widget.item(i)
-                if item.checkState() == Qt.CheckState.Checked:
-                    response = self.items_map[i]
-                    # 🔥 CONSTRUIT le test à refaire depuis la réponse
-                    test = (response['test_word'], response['choice1'], response['choice2'])
-                    items_to_retry.append(test)
-            if items_to_retry:
-                self.retry_item(items_to_retry)
+        layout.addLayout(left_layout)
+        layout.addLayout(self.right_layout)
+        central.setLayout(layout)
 
-    def retry_item(self, items):
-        self.new_window = SemanticMatching(items)
-        self.new_window.show()
-        self.close()
+    def prepare_test(self):
+        if self.patient_selector.currentText() == "-- Aucun --" or not all([
+            self.contact_input.text().strip(),
+            self.intensite_input.text().strip(),
+            self.duree_input.text().strip()
+        ]):
+            QMessageBox.warning(self, "Erreur", "Veuillez remplir tous les champs et choisir un patient.")
+            return
+
+        if self.mode_selector.currentText() == "Temps imparti" and not self.timer_input.text().isdigit():
+            QMessageBox.warning(self, "Erreur", "Veuillez entrer un temps valide en secondes.")
+            return
+
+        self.contact = self.contact_input.text().strip()
+        self.intensite = self.intensite_input.text().strip()
+        self.duree = self.duree_input.text().strip()
+        self.mode = self.mode_selector.currentText()
+        self.timer_duration = int(self.timer_input.text()) if self.mode == "Temps imparti" else 0
+
+        self.shuffled_triplets = random.sample(self.test_triplets, len(self.test_triplets))
+        self.index = 0
+        self.session_results = []
+        self.session_active = False
+
+        self.waiting_screen = WaitingScreen()
+        self.patient_window = SemanticMatchingPatient()
+        self.waiting_screen.show()
+        self.patient_window.show()
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setFocus()
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Type.KeyRelease and event.key() == Qt.Key.Key_Space:
+            if not self.session_active and self.waiting_screen.isVisible():
+                self.waiting_screen.hide()
+                self.session_active = True
+                self.show_next_triplet()
+            elif self.session_active and self.mode == "Barre espace":
+                self.index += 1
+                self.show_next_triplet()
+        return super().eventFilter(obj, event)
+
+    def advance_by_timer(self):
+        self.index += 1
+        self.show_next_triplet()
+
+    def show_next_triplet(self):
+        for i in reversed(range(self.right_layout.count())):
+            widget = self.right_layout.itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
+
+        if self.index >= len(self.shuffled_triplets):
+            self.save_results()
+            return
+
+        test_word, correct, distractor = self.shuffled_triplets[self.index]
+        options = [correct, distractor]
+        random.shuffle(options)
+        is_correct_map = {opt: opt == correct for opt in options}
+        self.start_time = time.time()
+
+        word_label = QLabel(f"<b>{test_word}</b>")
+        word_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        word_label.setStyleSheet("font-size: 28px; margin: 20px;")
+
+        btn1 = QPushButton(options[0])
+        btn2 = QPushButton(options[1])
+        for btn in (btn1, btn2):
+            btn.setStyleSheet("font-size: 20px; padding: 15px;")
+
+        def make_handler(selected_option, selected_button):
+            def handler():
+                rt = round(time.time() - self.start_time, 3)
+                self.session_results.append({
+                    "id_essai": self.index + 1,
+                    "temps_reponse": rt,
+                    "choix": selected_option,
+                    "correct": is_correct_map[selected_option],
+                    "mot_test": test_word,
+                    "participant": self.patient_selector.currentText(),
+                    "contact_stimulation": self.contact,
+                    "intensit\u00e9": self.intensite,
+                    "dur\u00e9e": self.duree,
+                    "mode": self.mode,
+                    "horodatage": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "test_name": self.test_name
+                })
+                for b in (btn1, btn2):
+                    b.setEnabled(False)
+                selected_button.setStyleSheet(f"font-size: 20px; padding: 15px; border: 4px solid {'green' if is_correct_map[selected_option] else 'red'}")
+                self.index += 1
+                QTimer.singleShot(500, self.show_next_triplet)
+            return handler
+
+        btn1.clicked.connect(make_handler(options[0], btn1))
+        btn2.clicked.connect(make_handler(options[1], btn2))
+
+        self.right_layout.addWidget(word_label)
+        self.right_layout.addWidget(btn1)
+        self.right_layout.addWidget(btn2)
+
+        self.patient_window.show_triplet(test_word, options, [make_handler(options[0], btn1), make_handler(options[1], btn2)])
+
+        if self.mode == "Temps imparti":
+            self.timer.start(self.timer_duration * 1000)
+
+    def save_results(self):
+        self.timer.stop()
+        df = pd.DataFrame(self.session_results)
+        if df.empty:
+            QMessageBox.information(self, "Fin", "Aucun r\u00e9sultat \u00e0 enregistrer.")
+            return
+
+        now = datetime.now().strftime("%Y_%m_%d_%H%M")
+        name = self.patient_selector.currentText().replace(" ", "_")
+        filename = f"{name}_{now}_{self.contact}-{self.intensite}-{self.duree}_{self.test_name}.xlsx"
+        df.to_excel(filename, index=False)
+        QMessageBox.information(self, "Fin", f"Test termin\u00e9. R\u00e9sultats enregistr\u00e9s dans :\n{filename}")
+        self.status_label.setText("Test termin\u00e9.")
+        if self.patient_window:
+            self.patient_window.close()
+        if self.waiting_screen:
+            self.waiting_screen.close()
+        self.session_active = False
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = SemanticMatching(tests)
+    window = SemanticMatchingExaminateur(tests)
     window.show()
     sys.exit(app.exec())
-
-
-
