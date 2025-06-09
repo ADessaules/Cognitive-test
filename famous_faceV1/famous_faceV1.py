@@ -269,65 +269,73 @@ class FamousFaceTest(QMainWindow):
         contact = self.contact_input.text().strip()
         intensite = self.intensite_input.text().strip()
         duree = self.duree_input.text().strip()
-
-        if not all([contact, intensite, duree]):
-            QMessageBox.warning(self, "Erreur", "Veuillez remplir tous les champs.")
-            return
-
-        self.init_test_state()
-        selected = self.patient_selector.currentText()
-        if selected == "-- Aucun --":
+        mode_text = self.mode_selector.currentText()
+        timer_text = self.timer_input.text().strip()
+    
+        if self.patient_selector.currentText() == "-- Aucun --":
             QMessageBox.warning(self, "Erreur", "Veuillez sélectionner un patient.")
             return
-        self.participant_name = selected
+    
+        if not contact or not intensite or not duree:
+            QMessageBox.warning(self, "Erreur", "Veuillez remplir tous les champs de stimulation.")
+            return
+    
+        if mode_text == "Temps imparti":
+            if not timer_text or not timer_text.isdigit() or int(timer_text) <= 0:
+                QMessageBox.warning(self, "Erreur", "Veuillez indiquer un temps imparti valide (en secondes).")
+                return
+            self.timer_duration = int(timer_text)
+        else:
+            self.timer_duration = 0
+    
+        self.init_test_state()
+        self.participant_name = self.patient_selector.currentText()
         self.stim_contact = contact
         self.stim_intensite = intensite
         self.stim_duree = duree
-
-        mode_text = self.mode_selector.currentText()
         self.mode = "timer" if mode_text == "Temps imparti" else "click" if mode_text == "Image au clic" else "space"
         self.space_mode = self.mode == "space"
-
-        try:
-            self.timer_duration = int(self.timer_input.text()) if self.mode == "timer" else 0
-        except ValueError:
-            self.timer_duration = 3
-
+    
         if self.selection_loaded and self.selected_triplets:
             random.shuffle(self.selected_triplets)
             self.current_triplets = self.selected_triplets[:]
         else:
             QMessageBox.warning(self, "Pas de sélection", "Ce patient n'a pas encore effectué de sélection. Veuillez retourner à la présélection.")
             return
+    
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setFocus()
         self.waiting_screen.show()
         self.patient_window.show()
 
     def keyReleaseEvent(self, event):
-        if event.key() == Qt.Key.Key_Space and not self.session_active and self.waiting_screen.isVisible():
-            self.waiting_screen.hide()
-            self.session_active = True
-            self.current_index = 0
-            self.click_times = []
-            self.error_indices = []
-            self.trial_results = []
-            self.nurse_clicks = []
+        if event.key() == Qt.Key.Key_Space:
+            if not self.session_active and self.waiting_screen.isVisible():
+                self.waiting_screen.hide()
+                self.session_active = True
+                self.current_index = 0
+                self.click_times = []
+                self.error_indices = []
+                self.trial_results = []
+                self.nurse_clicks = []
     
-            # Utiliser les triplets sélectionnés
-            if self.selection_loaded and self.selected_triplets:
-                self.current_triplets = self.selected_triplets[:]
-                random.shuffle(self.current_triplets)
-                print(f"🔁 {len(self.current_triplets)} triplets sélectionnés pour le test.")
-            else:
-                print("⚠️ Aucun triplet sélectionné.")
-                QMessageBox.warning(self, "Erreur", "Aucun triplet sélectionné à afficher.")
-                self.end_session()
-                return
-
-            self.session_start_time = time.time()
-            self.show_triplet()
-
+                if self.selection_loaded and self.selected_triplets:
+                    self.current_triplets = self.selected_triplets[:]
+                    random.shuffle(self.current_triplets)
+                    print(f"🔁 {len(self.current_triplets)} triplets sélectionnés pour le test.")
+                else:
+                    print("⚠️ Aucun triplet sélectionné.")
+                    QMessageBox.warning(self, "Erreur", "Aucun triplet sélectionné à afficher.")
+                    self.end_session()
+                    return
+    
+                self.session_start_time = time.time()
+                self.show_triplet()
+    
+            elif self.session_active and self.mode == "space":
+                self.current_index += 1
+                self.show_triplet()
+                
     def show_triplet(self):
         for layout in (self.image_layout, self.patient_window.image_layout):
             for i in reversed(range(layout.count())):
@@ -383,18 +391,18 @@ class FamousFaceTest(QMainWindow):
     def handle_click(self, is_famous):
         if not self.session_active:
             return
-
+    
         if self.timer.isActive():
             self.timer.stop()
-
+    
         now = time.time()
         reaction_time = round(now - self.start_time, 3)
         elapsed_since_start = round(now - self.session_start_time, 3)
-
+    
         self.click_times.append(reaction_time)
         if not is_famous:
             self.error_indices.append(self.current_index)
-
+    
         self.trial_results.append({
             "id_essai": self.current_index + 1,
             "temps_total_depuis_debut": elapsed_since_start,
@@ -407,23 +415,31 @@ class FamousFaceTest(QMainWindow):
             "mode": self.mode,
             "contact_stimulation": self.stim_contact
         })
-
+    
         for i, label in enumerate(self.experimenter_labels):
             if i == self.selected_index:
                 color = "green" if self.flags[i] else "red"
                 label.setStyleSheet(f"border: 4px solid {color}; margin: 5px;")
-
+    
         self.current_index += 1
-        QTimer.singleShot(500, self.show_triplet)
-
+        if self.mode == "timer":
+            QTimer.singleShot(100, self.show_triplet)  # Respecte l'enchaînement fluide
+        else:
+            self.show_triplet()
+    
+    
     def handle_timeout(self):
         self.timer.stop()
+    
+        if not self.session_active:
+            return
+    
         now = time.time()
         elapsed_since_start = round(now - self.session_start_time, 3)
-
+    
         self.click_times.append(self.timer_duration)
         self.error_indices.append(self.current_index)
-
+    
         self.trial_results.append({
             "id_essai": self.current_index + 1,
             "temps_total_depuis_debut": elapsed_since_start,
@@ -436,15 +452,16 @@ class FamousFaceTest(QMainWindow):
             "mode": self.mode,
             "contact_stimulation": self.stim_contact
         })
-
+    
         self.current_index += 1
-        self.show_triplet()
+        QTimer.singleShot(100, self.show_triplet)  # Déclenche l’essai suivant rapidement
 
     def end_session(self):
         if not self.session_active:
             return
-
+    
         self.session_active = False
+        self.timer.stop()  # ⬅️ Ajout important ici
         self.patient_window.hide()
 
         df_trials = pd.DataFrame(self.trial_results)
