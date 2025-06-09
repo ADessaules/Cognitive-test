@@ -423,7 +423,7 @@ class FamousFaceTest(QMainWindow):
     
         self.current_index += 1
         if self.mode == "timer":
-            QTimer.singleShot(100, self.show_triplet)
+            QTimer.singleShot(100, self.show_triplet)  # Respecte l'enchaînement fluide
         else:
             self.show_triplet()
     
@@ -454,7 +454,7 @@ class FamousFaceTest(QMainWindow):
         })
     
         self.current_index += 1
-        QTimer.singleShot(100, self.show_triplet)
+        QTimer.singleShot(100, self.show_triplet)  # Déclenche l’essai suivant rapidement
 
     def end_session(self):
         if not self.session_active:
