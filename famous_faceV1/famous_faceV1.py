@@ -328,7 +328,14 @@ class FamousFaceTest(QMainWindow):
                     QMessageBox.warning(self, "Erreur", "Aucun triplet sélectionné à afficher.")
                     self.end_session()
                     return
-    
+                    
+                if self.mode == "timer":
+                    timer_text = self.timer_input.text().strip()
+                    if timer_text.isdigit():
+                        self.timer_duration = int(timer_text)
+                    else:
+                        self.timer_duration = 1  # Valeur par défaut si champ vide
+                        
                 self.session_start_time = time.time()
                 self.show_triplet()
     
