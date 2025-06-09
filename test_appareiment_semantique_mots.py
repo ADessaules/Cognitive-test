@@ -9,9 +9,8 @@ tests = [
     ("chameau", "désert", "forêt"),
     ("piano", "partition", "roman"),
     ("sifflet", "maçon", "gendarme"),
-    ("château", "chevalier", "pirate")
-]
-'''("chauve-souris", "nuit", "jour"),
+    ("château", "chevalier", "pirate"),
+    ("chauve-souris", "nuit", "jour"),
     ("serpent", "banquise", "désert"),
     ("flèche", "arc", "fusil"), 
     ("moulin à vent", "campagne", "ville"),
@@ -78,7 +77,7 @@ tests = [
     ("marteau", "vis", "clou"),
     ("rhinocéros", "lion", "chat"),
     ("moto", "costume", "blouson"),
-    ("écureuil", "maïs", "gland")'''
+    ("écureuil", "maïs", "gland")]
 
 
 class SemanticMatching(QWidget):

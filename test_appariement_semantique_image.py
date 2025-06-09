@@ -161,8 +161,8 @@ class ImageSemanticMatching(QWidget):
 
 if __name__ == "__main__":
     tests_image = [
-        ("C:/Users/lekil/OneDrive/Bureau/Projet_tutoré-Cognitive_test/Cognitive-test/image_test_appariement/Image1.jpg", "C:/Users/lekil/OneDrive/Bureau/Projet_tutoré-Cognitive_test/Cognitive-test/image_test_appariement/Image2.jpg", "C:/Users/lekil/OneDrive/Bureau/Projet_tutoré-Cognitive_test/Cognitive-test/image_test_appariement/Image3.jpg"),
-        ("C:/Users/lekil/OneDrive/Bureau/Projet_tutoré-Cognitive_test/Cognitive-test/image_test_appariement/Image4.jpg", "C:/Users/lekil/OneDrive/Bureau/Projet_tutoré-Cognitive_test/Cognitive-test/image_test_appariement/Image5.jpg", "C:/Users/lekil/OneDrive/Bureau/Projet_tutoré-Cognitive_test/Cognitive-test/image_test_appariement/Image6.jpg"),
+        ("./image_test_appariement/Image1.jpg", "./image_test_appariement/Image2.jpg", "./image_test_appariement/Image3.jpg"),
+        ("./image_test_appariement/Image4.jpg", "./image_test_appariement/Image5.jpg", "./image_test_appariement/Image6.jpg"),
         ("C:/Users/lekil/OneDrive/Bureau/Projet_tutoré-Cognitive_test/Cognitive-test/image_test_appariement/Image7.jpg", "C:/Users/lekil/OneDrive/Bureau/Projet_tutoré-Cognitive_test/Cognitive-test/image_test_appariement/Image8.jpg", "C:/Users/lekil/OneDrive/Bureau/Projet_tutoré-Cognitive_test/Cognitive-test/image_test_appariement/Image9.jpg"),
         ("C:/Users/lekil/OneDrive/Bureau/Projet_tutoré-Cognitive_test/Cognitive-test/image_test_appariement/Image10.jpg", "C:/Users/lekil/OneDrive/Bureau/Projet_tutoré-Cognitive_test/Cognitive-test/image_test_appariement/Image11.jpg", "C:/Users/lekil/OneDrive/Bureau/Projet_tutoré-Cognitive_test/Cognitive-test/image_test_appariement/Image12.jpg"),
         ("C:/Users/lekil/OneDrive/Bureau/Projet_tutoré-Cognitive_test/Cognitive-test/image_test_appariement/Image13.jpg", "C:/Users/lekil/OneDrive/Bureau/Projet_tutoré-Cognitive_test/Cognitive-test/image_test_appariement/Image14.jpg", "C:/Users/lekil/OneDrive/Bureau/Projet_tutoré-Cognitive_test/Cognitive-test/image_test_appariement/Image15.jpg"),

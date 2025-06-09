@@ -56,6 +56,9 @@ class MainWindow(QMainWindow):
 
         self.list_tests = QListWidget()
         self.list_tests.addItem("famous_faceV1")
+        self.list_tests.addItem("matching_unknow_face")
+        self.list_tests.addItem("appareiment_semantique_mots")
+        self.list_tests.addItem("appareiment_semantique_image")
 
         self.list_tests.itemClicked.connect(self.launch_test)
 
@@ -77,6 +80,24 @@ class MainWindow(QMainWindow):
             try:
                 self.hide()  # ⬅️ Masquer l'interface principale
                 subprocess.Popen(["python", "./famous_faceV1/famous_faceV1.py"])
+            except Exception as e:
+                print(f"Erreur lors du lancement du test : {e}")
+        elif test_name == "matching_unknow_face":
+            try:
+                self.hide()
+                subprocess.Popen(["python", "./matching_unknown_faceV1/matching_unknown_faceV1.py"])
+            except Exception as e:
+                print(f"Erreur lors du lancement du test : {e}")
+        elif test_name == "appareiment_semantique_mots":
+            try:
+                self.hide()
+                subprocess.Popen(["python", "./test_appareiment_semantique_mots.py"])
+            except Exception as e:
+                print(f"Erreur lors du lancement du test : {e}")
+        elif test_name == "appareiment_semantique_image":
+            try:
+                self.hide()
+                subprocess.Popen(["python", "./test_appariement_semantique_image.py"])
             except Exception as e:
                 print(f"Erreur lors du lancement du test : {e}")
 
