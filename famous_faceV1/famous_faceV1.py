@@ -269,36 +269,40 @@ class FamousFaceTest(QMainWindow):
         contact = self.contact_input.text().strip()
         intensite = self.intensite_input.text().strip()
         duree = self.duree_input.text().strip()
-
-        if not all([contact, intensite, duree]):
-            QMessageBox.warning(self, "Erreur", "Veuillez remplir tous les champs.")
-            return
-
-        self.init_test_state()
-        selected = self.patient_selector.currentText()
-        if selected == "-- Aucun --":
+        mode_text = self.mode_selector.currentText()
+        timer_text = self.timer_input.text().strip()
+    
+        if self.patient_selector.currentText() == "-- Aucun --":
             QMessageBox.warning(self, "Erreur", "Veuillez sélectionner un patient.")
             return
-        self.participant_name = selected
+    
+        if not contact or not intensite or not duree:
+            QMessageBox.warning(self, "Erreur", "Veuillez remplir tous les champs de stimulation.")
+            return
+    
+        if mode_text == "Temps imparti":
+            if not timer_text or not timer_text.isdigit() or int(timer_text) <= 0:
+                QMessageBox.warning(self, "Erreur", "Veuillez indiquer un temps imparti valide (en secondes).")
+                return
+            self.timer_duration = int(timer_text)
+        else:
+            self.timer_duration = 0
+    
+        self.init_test_state()
+        self.participant_name = self.patient_selector.currentText()
         self.stim_contact = contact
         self.stim_intensite = intensite
         self.stim_duree = duree
-
-        mode_text = self.mode_selector.currentText()
         self.mode = "timer" if mode_text == "Temps imparti" else "click" if mode_text == "Image au clic" else "space"
         self.space_mode = self.mode == "space"
-
-        try:
-            self.timer_duration = int(self.timer_input.text()) if self.mode == "timer" else 0
-        except ValueError:
-            self.timer_duration = 3
-
+    
         if self.selection_loaded and self.selected_triplets:
             random.shuffle(self.selected_triplets)
             self.current_triplets = self.selected_triplets[:]
         else:
             QMessageBox.warning(self, "Pas de sélection", "Ce patient n'a pas encore effectué de sélection. Veuillez retourner à la présélection.")
             return
+    
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setFocus()
         self.waiting_screen.show()
