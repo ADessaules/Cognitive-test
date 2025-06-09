@@ -309,29 +309,33 @@ class FamousFaceTest(QMainWindow):
         self.patient_window.show()
 
     def keyReleaseEvent(self, event):
-        if event.key() == Qt.Key.Key_Space and not self.session_active and self.waiting_screen.isVisible():
-            self.waiting_screen.hide()
-            self.session_active = True
-            self.current_index = 0
-            self.click_times = []
-            self.error_indices = []
-            self.trial_results = []
-            self.nurse_clicks = []
+        if event.key() == Qt.Key.Key_Space:
+            if not self.session_active and self.waiting_screen.isVisible():
+                self.waiting_screen.hide()
+                self.session_active = True
+                self.current_index = 0
+                self.click_times = []
+                self.error_indices = []
+                self.trial_results = []
+                self.nurse_clicks = []
     
-            # Utiliser les triplets sélectionnés
-            if self.selection_loaded and self.selected_triplets:
-                self.current_triplets = self.selected_triplets[:]
-                random.shuffle(self.current_triplets)
-                print(f"🔁 {len(self.current_triplets)} triplets sélectionnés pour le test.")
-            else:
-                print("⚠️ Aucun triplet sélectionné.")
-                QMessageBox.warning(self, "Erreur", "Aucun triplet sélectionné à afficher.")
-                self.end_session()
-                return
-
-            self.session_start_time = time.time()
-            self.show_triplet()
-
+                if self.selection_loaded and self.selected_triplets:
+                    self.current_triplets = self.selected_triplets[:]
+                    random.shuffle(self.current_triplets)
+                    print(f"🔁 {len(self.current_triplets)} triplets sélectionnés pour le test.")
+                else:
+                    print("⚠️ Aucun triplet sélectionné.")
+                    QMessageBox.warning(self, "Erreur", "Aucun triplet sélectionné à afficher.")
+                    self.end_session()
+                    return
+    
+                self.session_start_time = time.time()
+                self.show_triplet()
+    
+            elif self.session_active and self.mode == "space":
+                self.current_index += 1
+                self.show_triplet()
+                
     def show_triplet(self):
         for layout in (self.image_layout, self.patient_window.image_layout):
             for i in reversed(range(layout.count())):
@@ -446,7 +450,7 @@ class FamousFaceTest(QMainWindow):
         })
     
         self.current_index += 1
-        self.show_triplet()
+        QTimer.singleShot(100, self.show_triplet)
 
     def end_session(self):
         if not self.session_active:
