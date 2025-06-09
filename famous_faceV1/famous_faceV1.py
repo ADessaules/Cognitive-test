@@ -117,7 +117,7 @@ class FamousFaceTest(QMainWindow):
 
         self.init_test_state()
         self.timer = QTimer()
-       self.timer.timeout.connect(self.advance_by_timer)
+        self.timer.timeout.connect(self.advance_by_timer)
 
         self.patient_window = PatientWindow()
         self.waiting_screen = WaitingScreen()
