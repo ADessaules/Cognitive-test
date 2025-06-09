@@ -426,7 +426,10 @@ class FamousFaceTest(QMainWindow):
         for i, label in enumerate(self.experimenter_labels):
             if i == self.selected_index:
                 color = "green" if self.flags[i] else "red"
-                label.setStyleSheet(f"border: 4px solid {color}; margin: 5px;")
+            else:
+                color = "transparent"
+            label.setStyleSheet(f"border: 4px solid {color}; margin: 5px;")
+
     
         self.current_index += 1
         if self.mode == "timer":
