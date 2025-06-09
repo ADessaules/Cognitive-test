@@ -426,17 +426,15 @@ class FamousFaceTest(QMainWindow):
             QTimer.singleShot(100, self.show_triplet)  # Respecte l'enchaînement fluide
         else:
             self.show_triplet()
-    
-    
-    def handle_timeout(self):
-        self.timer.stop()
-    
+
+    def advance_by_timer(self):
         if not self.session_active:
             return
     
         now = time.time()
         elapsed_since_start = round(now - self.session_start_time, 3)
     
+        # Enregistrer que le participant n’a pas cliqué
         self.click_times.append(self.timer_duration)
         self.error_indices.append(self.current_index)
     
@@ -454,10 +452,7 @@ class FamousFaceTest(QMainWindow):
         })
     
         self.current_index += 1
-
-    def advance_by_timer(self):
-        self.handle_timeout()
-        self.show_triplet()
+        self.show_triplet()  # Et on relance le cycle
 
     def end_session(self):
         if not self.session_active:
