@@ -457,6 +457,7 @@ class FamousFaceTest(QMainWindow):
 
     def advance_by_timer(self):
         self.handle_timeout()
+        self.show_triplet()
 
     def end_session(self):
         if not self.session_active:
