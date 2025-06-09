@@ -391,18 +391,18 @@ class FamousFaceTest(QMainWindow):
     def handle_click(self, is_famous):
         if not self.session_active:
             return
-
+    
         if self.timer.isActive():
             self.timer.stop()
-
+    
         now = time.time()
         reaction_time = round(now - self.start_time, 3)
         elapsed_since_start = round(now - self.session_start_time, 3)
-
+    
         self.click_times.append(reaction_time)
         if not is_famous:
             self.error_indices.append(self.current_index)
-
+    
         self.trial_results.append({
             "id_essai": self.current_index + 1,
             "temps_total_depuis_debut": elapsed_since_start,
@@ -415,15 +415,19 @@ class FamousFaceTest(QMainWindow):
             "mode": self.mode,
             "contact_stimulation": self.stim_contact
         })
-
+    
         for i, label in enumerate(self.experimenter_labels):
             if i == self.selected_index:
                 color = "green" if self.flags[i] else "red"
                 label.setStyleSheet(f"border: 4px solid {color}; margin: 5px;")
-
+    
         self.current_index += 1
-        QTimer.singleShot(500, self.show_triplet)
-
+        if self.mode == "timer":
+            QTimer.singleShot(100, self.show_triplet)
+        else:
+            self.show_triplet()
+    
+    
     def handle_timeout(self):
         self.timer.stop()
     
@@ -450,6 +454,7 @@ class FamousFaceTest(QMainWindow):
         })
     
         self.current_index += 1
+        QTimer.singleShot(100, self.show_triplet)
 
     def end_session(self):
         if not self.session_active:
