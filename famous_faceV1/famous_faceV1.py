@@ -117,7 +117,7 @@ class FamousFaceTest(QMainWindow):
 
         self.init_test_state()
         self.timer = QTimer()
-        self.timer.timeout.connect(self.handle_timeout)
+       self.timer.timeout.connect(self.advance_by_timer)
 
         self.patient_window = PatientWindow()
         self.waiting_screen = WaitingScreen()
@@ -454,7 +454,9 @@ class FamousFaceTest(QMainWindow):
         })
     
         self.current_index += 1
-        self.show_triplet()
+
+    def advance_by_timer(self):
+        self.handle_timeout()
 
     def end_session(self):
         if not self.session_active:
