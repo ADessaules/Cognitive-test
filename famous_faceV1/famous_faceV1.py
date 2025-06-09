@@ -418,12 +418,16 @@ class FamousFaceTest(QMainWindow):
 
     def handle_timeout(self):
         self.timer.stop()
+    
+        if not self.session_active:
+            return  # Ajout essentiel pour stopper ici si la session est terminée
+    
         now = time.time()
         elapsed_since_start = round(now - self.session_start_time, 3)
-
+    
         self.click_times.append(self.timer_duration)
         self.error_indices.append(self.current_index)
-
+    
         self.trial_results.append({
             "id_essai": self.current_index + 1,
             "temps_total_depuis_debut": elapsed_since_start,
@@ -436,15 +440,16 @@ class FamousFaceTest(QMainWindow):
             "mode": self.mode,
             "contact_stimulation": self.stim_contact
         })
-
+    
         self.current_index += 1
         self.show_triplet()
 
     def end_session(self):
         if not self.session_active:
             return
-
+    
         self.session_active = False
+        self.timer.stop()  # ⬅️ Ajout important ici
         self.patient_window.hide()
 
         df_trials = pd.DataFrame(self.trial_results)
