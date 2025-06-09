@@ -117,7 +117,7 @@ class FamousFaceTest(QMainWindow):
 
         self.init_test_state()
         self.timer = QTimer()
-        self.timer.timeout.connect(self.advance_by_timer)
+        self.timer.timeout.connect(self.handle_timeout)
 
         self.patient_window = PatientWindow()
         self.waiting_screen = WaitingScreen()
@@ -328,14 +328,14 @@ class FamousFaceTest(QMainWindow):
                     QMessageBox.warning(self, "Erreur", "Aucun triplet sélectionné à afficher.")
                     self.end_session()
                     return
-                    
+
                 if self.mode == "timer":
                     timer_text = self.timer_input.text().strip()
                     if timer_text.isdigit():
                         self.timer_duration = int(timer_text)
                     else:
                         self.timer_duration = 1  # Valeur par défaut si champ vide
-                        
+    
                 self.session_start_time = time.time()
                 self.show_triplet()
     
@@ -387,7 +387,7 @@ class FamousFaceTest(QMainWindow):
             self.experimenter_labels.append(label_mirror)
 
         if self.mode == "timer":
-            self.timer.start(self.timer_duration * 1000)  # Démarre ici à chaque triplet
+            self.timer.start(self.timer_duration * 1000)
 
     def make_click_handler(self, is_famous, index):
         def handler(event):
@@ -426,25 +426,24 @@ class FamousFaceTest(QMainWindow):
         for i, label in enumerate(self.experimenter_labels):
             if i == self.selected_index:
                 color = "green" if self.flags[i] else "red"
-            else:
-                color = "transparent"
-            label.setStyleSheet(f"border: 4px solid {color}; margin: 5px;")
-
+                label.setStyleSheet(f"border: 4px solid {color}; margin: 5px;")
     
         self.current_index += 1
         if self.mode == "timer":
             QTimer.singleShot(100, self.show_triplet)  # Respecte l'enchaînement fluide
         else:
             self.show_triplet()
-
-    def advance_by_timer(self):
+    
+    
+    def handle_timeout(self):
+        self.timer.stop()
+    
         if not self.session_active:
             return
     
         now = time.time()
         elapsed_since_start = round(now - self.session_start_time, 3)
     
-        # Enregistrer que le participant n’a pas cliqué
         self.click_times.append(self.timer_duration)
         self.error_indices.append(self.current_index)
     
@@ -462,7 +461,7 @@ class FamousFaceTest(QMainWindow):
         })
     
         self.current_index += 1
-        self.show_triplet()  # Et on relance le cycle
+        QTimer.singleShot(100, self.show_triplet)  # Déclenche l’essai suivant rapidement
 
     def end_session(self):
         if not self.session_active:
