@@ -450,9 +450,6 @@ class FamousFaceTest(QMainWindow):
         })
     
         self.current_index += 1
-    
-        # ✅ Ajoute un délai minimal avant de passer au triplet suivant
-        QTimer.singleShot(100, self.show_triplet)
 
     def end_session(self):
         if not self.session_active:
