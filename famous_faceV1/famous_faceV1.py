@@ -428,7 +428,7 @@ class FamousFaceTest(QMainWindow):
         self.timer.stop()
     
         if not self.session_active:
-            return  # Ajout essentiel pour stopper ici si la session est terminée
+            return
     
         now = time.time()
         elapsed_since_start = round(now - self.session_start_time, 3)
@@ -450,6 +450,8 @@ class FamousFaceTest(QMainWindow):
         })
     
         self.current_index += 1
+    
+        # ✅ Ajoute un délai minimal avant de passer au triplet suivant
         QTimer.singleShot(100, self.show_triplet)
 
     def end_session(self):
