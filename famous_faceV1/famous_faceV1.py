@@ -380,7 +380,7 @@ class FamousFaceTest(QMainWindow):
             self.experimenter_labels.append(label_mirror)
 
         if self.mode == "timer":
-            self.timer.start(self.timer_duration * 1000)
+            self.timer.start(self.timer_duration * 1000)  # Démarre ici à chaque triplet
 
     def make_click_handler(self, is_famous, index):
         def handler(event):
@@ -454,7 +454,7 @@ class FamousFaceTest(QMainWindow):
         })
     
         self.current_index += 1
-        QTimer.singleShot(100, self.show_triplet)  # Déclenche l’essai suivant rapidement
+        self.show_triplet()
 
     def end_session(self):
         if not self.session_active:
