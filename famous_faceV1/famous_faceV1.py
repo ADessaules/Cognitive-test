@@ -423,17 +423,16 @@ class FamousFaceTest(QMainWindow):
             "contact_stimulation": self.stim_contact
         })
     
+        # ✅ Affiche toutes les bordures sur l'interface expérimentateur
         for i, label in enumerate(self.experimenter_labels):
             if i == self.selected_index:
                 color = "green" if self.flags[i] else "red"
-                label.setStyleSheet(f"border: 4px solid {color}; margin: 5px;")
+            else:
+                color = "transparent"
+            label.setStyleSheet(f"border: 4px solid {color}; margin: 5px;")
     
         self.current_index += 1
-        if self.mode == "timer":
-            QTimer.singleShot(100, self.show_triplet)  # Respecte l'enchaînement fluide
-        else:
-            self.show_triplet()
-    
+        QTimer.singleShot(500, self.show_triplet)
     
     def handle_timeout(self):
         self.timer.stop()
