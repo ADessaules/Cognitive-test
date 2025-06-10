@@ -328,6 +328,13 @@ class FamousFaceTest(QMainWindow):
                     QMessageBox.warning(self, "Erreur", "Aucun triplet sélectionné à afficher.")
                     self.end_session()
                     return
+
+                if self.mode == "timer":
+                    timer_text = self.timer_input.text().strip()
+                    if timer_text.isdigit():
+                        self.timer_duration = int(timer_text)
+                    else:
+                        self.timer_duration = 1  # Valeur par défaut si champ vide
     
                 self.session_start_time = time.time()
                 self.show_triplet()
@@ -416,17 +423,16 @@ class FamousFaceTest(QMainWindow):
             "contact_stimulation": self.stim_contact
         })
     
+        # ✅ Affiche toutes les bordures sur l'interface expérimentateur
         for i, label in enumerate(self.experimenter_labels):
             if i == self.selected_index:
                 color = "green" if self.flags[i] else "red"
-                label.setStyleSheet(f"border: 4px solid {color}; margin: 5px;")
+            else:
+                color = "transparent"
+            label.setStyleSheet(f"border: 4px solid {color}; margin: 5px;")
     
         self.current_index += 1
-        if self.mode == "timer":
-            QTimer.singleShot(100, self.show_triplet)  # Respecte l'enchaînement fluide
-        else:
-            self.show_triplet()
-    
+        QTimer.singleShot(500, self.show_triplet)
     
     def handle_timeout(self):
         self.timer.stop()
