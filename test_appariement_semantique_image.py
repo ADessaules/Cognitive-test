@@ -1,6 +1,7 @@
 # VERSION ADAPTÉE DU TEST SÉMANTIQUE PAR IMAGES
 # Ce script suit la même structure que matching_unknown_faceV1.py
 
+
 import sys
 import os
 import random
@@ -18,10 +19,10 @@ from PyQt6.QtCore import Qt, QTimer, QEvent
 class WaitingScreen(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Écran d'attente")
+        self.setWindowTitle("\u00c9cran d'attente")
         self.setGeometry(920, 100, 800, 600)
         layout = QVBoxLayout()
-        label = QLabel("Appuyez sur Espace pour démarrer le test")
+        label = QLabel("Appuyez sur Espace pour d\u00e9marrer le test")
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(label)
         self.setLayout(layout)
@@ -29,20 +30,17 @@ class WaitingScreen(QWidget):
 class PatientWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Test en cours - Écran patient")
+        self.setWindowTitle("Test Appariement S\u00e9mantique - Patient")
         self.setGeometry(920, 100, 800, 600)
         self.top_label = QLabel()
         self.top_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
         self.bottom_layout = QHBoxLayout()
-        self.bottom_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
         layout = QVBoxLayout()
         layout.addWidget(self.top_label)
         layout.addLayout(self.bottom_layout)
         self.setLayout(layout)
 
-    def show_triplet(self, top_image_path, bottom_images, handlers):
+    def show_triplet(self, top_image_path, options, handlers):
         pixmap_top = QPixmap(top_image_path).scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio)
         self.top_label.setPixmap(pixmap_top)
 
@@ -51,23 +49,23 @@ class PatientWindow(QWidget):
             if w:
                 w.setParent(None)
 
-        for path, handler in zip(bottom_images, handlers):
-            label = QLabel()
-            pixmap = QPixmap(path).scaled(200, 200, Qt.AspectRatioMode.KeepAspectRatio)
-            label.setPixmap(pixmap)
-            label.mousePressEvent = handler
-            self.bottom_layout.addWidget(label)
+        for path, handler in zip(options, handlers):
+            btn = QPushButton()
+            btn.setIcon(QIcon(path))
+            btn.setIconSize(pixmap_top.size())
+            btn.setFixedSize(220, 220)
+            btn.clicked.connect(handler)
+            self.bottom_layout.addWidget(btn)
 
 class ImageSemanticMatchingTest(QMainWindow):
     def __init__(self, test_triplets):
         super().__init__()
-        self.setWindowTitle("Test Appariement Sémantique - Images (Expérimentateur)")
+        self.setWindowTitle("Test Appariement S\u00e9mantique - Images")
         self.setGeometry(100, 100, 1200, 600)
         self.test_triplets = test_triplets
         self.test_name = "matching_images"
         self.timer = QTimer()
         self.timer.timeout.connect(self.advance_by_timer)
-
         self.init_ui()
         self.installEventFilter(self)
 
@@ -88,9 +86,9 @@ class ImageSemanticMatchingTest(QMainWindow):
         self.contact_input = QLineEdit()
         self.contact_input.setPlaceholderText("Contacts de stimulation")
         self.intensite_input = QLineEdit()
-        self.intensite_input.setPlaceholderText("Intensité (mA)")
+        self.intensite_input.setPlaceholderText("Intensit\u00e9 (mA)")
         self.duree_input = QLineEdit()
-        self.duree_input.setPlaceholderText("Durée (ms)")
+        self.duree_input.setPlaceholderText("Dur\u00e9e (ms)")
 
         self.mode_selector = QComboBox()
         self.mode_selector.addItems(["Image au clic", "Temps imparti", "Barre espace"])
@@ -99,23 +97,23 @@ class ImageSemanticMatchingTest(QMainWindow):
         self.timer_input.setVisible(False)
         self.mode_selector.currentTextChanged.connect(lambda x: self.timer_input.setVisible(x == "Temps imparti"))
 
-        start_btn = QPushButton("Valider et Préparer le test")
+        start_btn = QPushButton("Valider et Pr\u00e9parer le test")
         start_btn.clicked.connect(self.prepare_test)
-        stop_btn = QPushButton("Arrêter et sauvegarder")
+        stop_btn = QPushButton("Arr\u00eater et sauvegarder")
         stop_btn.clicked.connect(self.save_results)
 
-        for w in [QLabel("Sélectionner un patient :"), self.patient_selector,
+        for w in [QLabel("S\u00e9lectionner un patient :"), self.patient_selector,
                   self.contact_input, self.intensite_input, self.duree_input,
                   QLabel("Mode de test :"), self.mode_selector,
                   self.timer_input, start_btn, stop_btn]:
             left_layout.addWidget(w)
 
-        self.image_layout = QGridLayout()
-        right_panel = QWidget()
-        right_panel.setLayout(self.image_layout)
+        self.status_label = QLabel("En attente du d\u00e9marrage du test…")
+        left_layout.addWidget(self.status_label)
 
+        self.image_layout = QVBoxLayout()
         layout.addLayout(left_layout)
-        layout.addWidget(right_panel)
+        layout.addLayout(self.image_layout)
         central.setLayout(layout)
 
     def prepare_test(self):
@@ -180,64 +178,71 @@ class ImageSemanticMatchingTest(QMainWindow):
         is_correct_map = {opt: opt == correct_path for opt in options}
         self.start_time = time.time()
 
-        def make_handler(selected_img):
-            def handler(event):
+        def make_handler(selected_img, btn):
+            def handler():
                 rt = round(time.time() - self.start_time, 3)
                 self.session_results.append({
                     "id_essai": self.index + 1,
                     "temps_reponse": rt,
-                    "image_choisie": "correct" if is_correct_map[selected_img] else "distracteur",
+                    "image_choisie": os.path.basename(selected_img),
                     "correct": is_correct_map[selected_img],
-                    "triplet_nom": os.path.basename(test_path),
+                    "image_testee": os.path.basename(test_path),
                     "participant": self.patient_selector.currentText(),
                     "contact_stimulation": self.contact,
                     "intensité": self.intensite,
                     "durée": self.duree,
                     "mode": self.mode,
-                    "horodatage": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "horodatage": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     "test_name": self.test_name
                 })
-                for i, opt in enumerate(options):
-                    label = self.image_layout.itemAtPosition(1, i).widget()
-                    color = "green" if is_correct_map[opt] else "red"
-                    if selected_img == opt:
-                        label.setStyleSheet(f"border: 4px solid {color}; margin: 5px;")
+                for b in buttons:
+                    b.setEnabled(False)
+                color = "green" if is_correct_map[selected_img] else "red"
+                btn.setStyleSheet(f"border: 4px solid {color}; margin: 5px;")
                 self.index += 1
                 QTimer.singleShot(500, self.show_next_triplet)
             return handler
 
-        handlers = [make_handler(opt) for opt in options]
+        buttons = []
+        top_label = QLabel()
+        top_label.setPixmap(QPixmap(test_path).scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio))
+        self.image_layout.addWidget(top_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
+        option_layout = QHBoxLayout()
+        handlers = []
+        for path in options:
+            btn = QPushButton()
+            btn.setIcon(QIcon(path))
+            btn.setIconSize(top_label.pixmap().size())
+            btn.setFixedSize(220, 220)
+            handler = make_handler(path, btn)
+            btn.clicked.connect(handler)
+            option_layout.addWidget(btn)
+            buttons.append(btn)
+            handlers.append(handler)
+
+        self.image_layout.addLayout(option_layout)
         self.patient_window.show_triplet(test_path, options, handlers)
-
-        # Affichage expérimentateur
-        top_lbl = QLabel()
-        top_lbl.setPixmap(QPixmap(test_path).scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio))
-        self.image_layout.addWidget(top_lbl, 0, 0, 1, 2, alignment=Qt.AlignmentFlag.AlignCenter)
-
-        for i, path in enumerate(options):
-            lbl = QLabel()
-            lbl.setPixmap(QPixmap(path).scaled(200, 200, Qt.AspectRatioMode.KeepAspectRatio))
-            self.image_layout.addWidget(lbl, 1, i)
 
         if self.mode == "Temps imparti":
             self.timer.start(self.timer_duration * 1000)
 
     def save_results(self):
+        self.timer.stop()
         df = pd.DataFrame(self.session_results)
         if df.empty:
+            QMessageBox.information(self, "Fin", "Aucun résultat à enregistrer.")
             return
-        now = datetime.now().strftime("%Y_%m_%d_%H%M")
+
+        now = datetime.datetime.now().strftime("%Y_%m_%d_%H%M")
         name = self.patient_selector.currentText().replace(" ", "_")
         filename = f"{name}_{now}_{self.contact}-{self.intensite}-{self.duree}_{self.test_name}.xlsx"
         df.to_excel(filename, index=False)
         QMessageBox.information(self, "Fin", f"Test terminé. Résultats enregistrés dans :\n{filename}")
-
         if self.patient_window:
             self.patient_window.close()
         if self.waiting_screen:
             self.waiting_screen.close()
-        self.timer.stop()
         self.session_active = False
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 import sys
 import random
 import time
-import datetime
+from datetime import datetime
 import pandas as pd
 from pathlib import Path
 from PyQt6.QtWidgets import (
@@ -101,7 +101,7 @@ class WaitingScreen(QWidget):
         self.setLayout(layout)
 
 class SemanticMatchingPatient(QWidget):
-    def __init__(self):
+    def __init__(self, tests):
         super().__init__()
         self.setWindowTitle("Test Appariement S\u00e9mantique - Patient")
         self.setGeometry(920, 100, 800, 600)
@@ -119,17 +119,24 @@ class SemanticMatchingPatient(QWidget):
         layout.addWidget(self.btn2)
         self.setLayout(layout)
 
+        self.show_triplet("Mot en attente", ["", ""], [lambda: None, lambda: None])
+
     def show_triplet(self, test_word, options, handlers):
         self.word_label.setText(test_word)
         self.btn1.setText(options[0])
         self.btn2.setText(options[1])
 
-        self.btn1.clicked.disconnect()
-        self.btn2.clicked.disconnect()
+        try:
+            self.btn1.clicked.disconnect()
+        except TypeError:
+            pass
+        try:
+            self.btn2.clicked.disconnect()
+        except TypeError:
+            pass
 
         self.btn1.clicked.connect(handlers[0])
-        self.btn2.clicked.connect(handlers[1])
-
+        self.btn2.clicked.connect(handlers[1]) 
 class SemanticMatchingExaminateur(QMainWindow):
     def __init__(self, test_triplets):
         super().__init__()
@@ -216,21 +223,28 @@ class SemanticMatchingExaminateur(QMainWindow):
         self.session_active = False
 
         self.waiting_screen = WaitingScreen()
-        self.patient_window = SemanticMatchingPatient()
+        self.patient_window = SemanticMatchingPatient(self.test_triplets)
+    
         self.waiting_screen.show()
         self.patient_window.show()
+
+    #    Assure le focus clavier sur la fenêtre expérimentateur
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.activateWindow()
+        self.raise_()
         self.setFocus()
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Type.KeyRelease and event.key() == Qt.Key.Key_Space:
-            if not self.session_active and self.waiting_screen.isVisible():
-                self.waiting_screen.hide()
-                self.session_active = True
-                self.show_next_triplet()
-            elif self.session_active and self.mode == "Barre espace":
-                self.index += 1
-                self.show_next_triplet()
+            if event.type() == QEvent.Type.KeyRelease:
+                print("Espace détecté")
+                if not self.session_active and self.waiting_screen.isVisible():
+                    self.waiting_screen.hide()
+                    self.session_active = True
+                    self.show_next_triplet()
+                elif self.session_active and self.mode == "Barre espace":
+                    self.index += 1
+                    self.show_next_triplet()
         return super().eventFilter(obj, event)
 
     def advance_by_timer(self):
@@ -302,15 +316,15 @@ class SemanticMatchingExaminateur(QMainWindow):
         self.timer.stop()
         df = pd.DataFrame(self.session_results)
         if df.empty:
-            QMessageBox.information(self, "Fin", "Aucun r\u00e9sultat \u00e0 enregistrer.")
+            QMessageBox.information(self, "Fin", "Aucun résultat à enregistrer.")
             return
 
         now = datetime.now().strftime("%Y_%m_%d_%H%M")
         name = self.patient_selector.currentText().replace(" ", "_")
         filename = f"{name}_{now}_{self.contact}-{self.intensite}-{self.duree}_{self.test_name}.xlsx"
         df.to_excel(filename, index=False)
-        QMessageBox.information(self, "Fin", f"Test termin\u00e9. R\u00e9sultats enregistr\u00e9s dans :\n{filename}")
-        self.status_label.setText("Test termin\u00e9.")
+        QMessageBox.information(self, "Fin", f"Test terminé. Résultats enregistrés dans :\n{filename}")
+        self.status_label.setText("Test terminé.")
         if self.patient_window:
             self.patient_window.close()
         if self.waiting_screen:
