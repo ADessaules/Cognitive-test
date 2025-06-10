@@ -66,7 +66,8 @@ class MatchingUnknownTest(QMainWindow):
         super().__init__()
         self.setWindowTitle("Matching Unknown Test - Exp\u00e9rimentateur")
         self.setGeometry(100, 100, 1200, 600)
-        self.image_folder = os.path.join(os.path.dirname(__file__), "matching_unknown_faceV1")
+        self.image_folder = os.path.join(os.path.dirname(__file__), "image_matching_unknown_faceV1")
+        self.output_folder = os.path.dirname(__file__)
         self.test_name = "matching_unknown"
         self.timer = QTimer()
         self.timer.timeout.connect(self.advance_by_timer)
@@ -280,7 +281,7 @@ class MatchingUnknownTest(QMainWindow):
         now = datetime.now().strftime("%Y_%m_%d_%H%M")
         name = self.patient_selector.currentText().replace(" ", "_")
         filename = f"{name}_{now}_{self.contact}-{self.intensite}-{self.duree}_{self.test_name}.xlsx"
-        output_dir = self.image_folder
+        output_dir = self.output_folder
         os.makedirs(output_dir, exist_ok=True)
         output_path = os.path.join(output_dir, filename)
         df.to_excel(output_path, index=False)
