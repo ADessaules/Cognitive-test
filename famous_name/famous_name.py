@@ -202,13 +202,22 @@ class FamousNameTest(QMainWindow):
             if not self.session_active and self.waiting_screen.isVisible():
                 self.waiting_screen.hide()
                 self.session_active = True
-                self.session_start_time = time.time()
                 self.current_index = 0
                 self.click_times = []
                 self.trial_results = []
                 self.nurse_clicks = []
+    
+                # ✅ re-lire timer_input ici (comme dans famous_faceV1)
+                if self.mode == "timer":
+                    timer_text = self.timer_input.text().strip()
+                    if timer_text.isdigit():
+                        self.timer_duration = int(timer_text)
+                    else:
+                        self.timer_duration = 1  # valeur par défaut
+    
+                self.session_start_time = time.time()
                 self.show_triplet()
-
+    
             elif self.session_active and self.mode == "space":
                 self.record_result(None, False)
                 self.current_index += 1
