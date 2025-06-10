@@ -99,6 +99,7 @@ class MatchingUnknownTest(QMainWindow):
                 print(f"\u274c Triplet invalide ignor\u00e9 pour le pr\u00e9fixe {prefix} : {files}")
 
         self.session_results = []
+        self.nurse_clicks = []
 
     def init_ui(self):
         central = QWidget()
@@ -183,6 +184,12 @@ class MatchingUnknownTest(QMainWindow):
         self.setFocus()
 
     def eventFilter(self, obj, event):
+        if event.type() == QEvent.Type.MouseButtonPress and self.session_active:
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            self.nurse_clicks.append({
+                "evenement": "clic_infirmiere",
+                "horodatage": now
+            })
         if event.type() == QEvent.Type.KeyRelease and event.key() == Qt.Key.Key_Space:
             if not self.session_active and self.waiting_screen and self.waiting_screen.isVisible():
                 self.waiting_screen.hide()
@@ -292,7 +299,9 @@ class MatchingUnknownTest(QMainWindow):
             self.timer.start(self.timer_duration * 1000)
 
     def save_results(self):
-        df = pd.DataFrame(self.session_results)
+        df_trials = pd.DataFrame(self.session_results)
+        df_clicks = pd.DataFrame(self.nurse_clicks)
+        df = pd.concat([df_trials, df_clicks], ignore_index=True)
         if df.empty:
             return
         now = datetime.now().strftime("%Y_%m_%d_%H%M")
