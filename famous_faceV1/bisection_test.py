@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QMessageBox, QLabel, QApplication, QHBoxLayout
+from PyQt6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QMessageBox, QLabel, QApplication, QHBoxLayout, QComboBox, QLineEdit, QGroupBox, QFormLayout
 from PyQt6.QtGui import QPainter, QPen
 from PyQt6.QtCore import Qt, QTimer
 import sqlite3
@@ -25,16 +25,14 @@ class BisectionTest(QWidget):
         self.setGeometry(screen_experimenter.geometry())
         self.move(screen_experimenter.geometry().topLeft())
 
-        self.btn_stop = QPushButton("Stopper le test")
-        self.btn_stop.setStyleSheet("font-size: 18px; background-color: red; color: white; padding: 5px;")
-        self.btn_stop.clicked.connect(self.stop_test)
-
+        # --- Boutons principaux ---
         self.btn_start = QPushButton("Démarrer le test")
-        self.btn_start.setStyleSheet("font-size: 18px; background-color: green; color: white; padding: 5px;")
-        self.btn_start.clicked.connect(self.start_test)
-
+        self.btn_stop = QPushButton("Arrêter et sauvegarder")
         self.btn_toggle_stimulation = QPushButton("Activer la stimulation")
-        self.btn_toggle_stimulation.setStyleSheet("font-size: 16px; padding: 5px;")
+
+        # Connexion des signaux
+        self.btn_start.clicked.connect(self.start_test)
+        self.btn_stop.clicked.connect(self.stop_test)
         self.btn_toggle_stimulation.clicked.connect(self.toggle_stimulation)
 
         self.label_stimulation = QLabel("Stimulation: inactive")
@@ -43,24 +41,51 @@ class BisectionTest(QWidget):
         self.preview = PreviewWidget()
 
         layout = QVBoxLayout()
-        layout.addWidget(self.btn_stop)
-        layout.addWidget(self.btn_start)
-        layout.addWidget(self.btn_toggle_stimulation)
-        layout.addWidget(self.label_stimulation)
 
+        # --- Section Stimulation ---
+        stimulation_group = QGroupBox("Paramètres de stimulation :")
+        stimulation_layout = QFormLayout()
+        self.input_contacts = QLineEdit()
+        self.input_intensity = QLineEdit()
+        self.input_duration = QLineEdit()
+        stimulation_layout.addRow("Contacts de stimulation", self.input_contacts)
+        stimulation_layout.addRow("Intensité (mA)", self.input_intensity)
+        stimulation_layout.addRow("Durée (ms)", self.input_duration)
+        stimulation_group.setLayout(stimulation_layout)
+        layout.addWidget(stimulation_group)
+
+        # --- Section Contrôle Test ---
+        controls_layout = QHBoxLayout()
+        controls_layout.addWidget(self.btn_start)
+        controls_layout.addWidget(self.btn_stop)
+        layout.addLayout(controls_layout)
+
+        # --- Section Stimulation active/inactive ---
+        stimulation_state_layout = QHBoxLayout()
+        stimulation_state_layout.addWidget(self.btn_toggle_stimulation)
+        stimulation_state_layout.addWidget(self.label_stimulation)
+        layout.addLayout(stimulation_state_layout)
+
+        # --- Section Preview ---
         hbox = QHBoxLayout()
         hbox.addStretch()
         hbox.addWidget(self.preview)
         hbox.addStretch()
         layout.addLayout(hbox)
 
+        # --- Section Validation ---
+        bottom_buttons_layout = QHBoxLayout()
+        bottom_buttons_layout.addWidget(self.btn_start)
+        bottom_buttons_layout.addWidget(self.btn_stop)
+        layout.addLayout(bottom_buttons_layout)
+
         self.setLayout(layout)
 
+        # --- Fenêtre Patient ---
         self.patient_window = PatientWindow(self)
         self.patient_window.setGeometry(screen_patient.geometry())
         self.patient_window.move(screen_patient.geometry().topLeft())
         self.patient_window.show()
-
         self.patient_window.setFocus()
         self.patient_window.setMouseTracking(True)
 
