@@ -39,7 +39,7 @@ class PatientWindow(QWidget):
 
         for name, handler in zip(triplet, click_handlers):
             button = QPushButton(name)
-            button.setFixedSize(250, 100)
+            button.setFixedSize(350, 200)
             button.setStyleSheet("font-size: 20px;")
             button.clicked.connect(handler)
             self.name_layout.addWidget(button)
@@ -243,7 +243,7 @@ class FamousNameTest(QMainWindow):
     
         for name in shuffled:
             label = QLabel(name)
-            label.setFixedSize(250, 100)
+            label.setFixedSize(350, 200)
             label.setStyleSheet("font-size: 18px; border: 2px solid gray; margin: 5px;")
             self.name_layout.addWidget(label)
             self.experimenter_labels.append(label)
