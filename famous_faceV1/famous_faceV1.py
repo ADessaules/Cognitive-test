@@ -373,15 +373,21 @@ class FamousFaceTest(QMainWindow):
 
         for idx, (img_name, is_famous) in enumerate(zip(shuffled, self.flags)):
             img_path = os.path.join(self.image_folder, img_name)
-            pixmap = QPixmap(img_path).scaled(500, 500, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-
+            # Image pour l'interface patient (grande taille)
+            pixmap_patient = QPixmap(img_path).scaled(
+                500, 500, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+            )
             label_patient = QLabel()
-            label_patient.setPixmap(pixmap)
+            label_patient.setPixmap(pixmap_patient)
             label_patient.mousePressEvent = self.make_click_handler(is_famous, idx)
             self.patient_window.image_layout.addWidget(label_patient)
-
+            
+            # Image pour l'interface expérimentateur (taille plus petite)
+            pixmap_experimenter = QPixmap(img_path).scaled(
+                250, 250, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+            )
             label_mirror = QLabel()
-            label_mirror.setPixmap(pixmap)
+            label_mirror.setPixmap(pixmap_experimenter)
             label_mirror.setStyleSheet("border: 2px solid transparent; margin: 5px;")
             self.image_layout.addWidget(label_mirror)
             self.experimenter_labels.append(label_mirror)
