@@ -189,6 +189,23 @@ class MatchingUnknownTest(QMainWindow):
                 self.session_active = True
                 self.show_next_triplet()
             elif self.session_active and self.mode == "Barre espace":
+                now = time.time()
+                reaction_time = round(now - self.start_time, 3)
+            
+                self.session_results.append({
+                    "id_essai": self.index + 1,
+                    "temps_reponse": reaction_time,
+                    "image_choisie": "aucune",
+                    "correct": False,
+                    "triplet_nom": self.shuffled_triplets[self.index][0].split("_")[1],
+                    "participant": self.patient_selector.currentText(),
+                    "contact_stimulation": self.contact,
+                    "intensité": self.intensite,
+                    "durée": self.duree,
+                    "mode": self.mode,
+                    "horodatage": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                })
+            
                 self.index += 1
                 self.show_next_triplet()
         return super().eventFilter(obj, event)
