@@ -40,7 +40,7 @@ class PatientWindow(QWidget):
                 widget.setParent(None)
 
         for img_path, handler in zip(triplet, click_handlers):
-            pixmap = QPixmap(img_path).scaled(700, 700, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            pixmap = QPixmap(img_path).scaled(500, 500, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
             label = QLabel()
             label.setPixmap(pixmap)
             label.mousePressEvent = handler
@@ -373,7 +373,7 @@ class FamousFaceTest(QMainWindow):
 
         for idx, (img_name, is_famous) in enumerate(zip(shuffled, self.flags)):
             img_path = os.path.join(self.image_folder, img_name)
-            pixmap = QPixmap(img_path).scaled(200, 200, Qt.AspectRatioMode.KeepAspectRatio)
+            pixmap = QPixmap(img_path).scaled(500, 500, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
 
             label_patient = QLabel()
             label_patient.setPixmap(pixmap)
