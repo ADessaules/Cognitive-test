@@ -151,7 +151,7 @@ class SemanticMatchingExaminateur(QMainWindow):
 
         self.patient_selector = QComboBox()
         self.patient_selector.addItem("-- Aucun --")
-        patients_path = Path(__file__).resolve().parent.parent / "Patients"
+        patients_path = Path(__file__).resolve().parent / "Patients"
         if patients_path.exists():
             for folder in patients_path.iterdir():
                 if folder.is_dir():
