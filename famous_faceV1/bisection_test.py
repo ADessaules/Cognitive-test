@@ -7,6 +7,8 @@ import time
 import pandas as pd
 from datetime import datetime
 import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from constant import DB_FILE, DOSSIER_PATIENTS
 
 class BisectionTest(QWidget):
@@ -147,7 +149,10 @@ class BisectionTest(QWidget):
             "Centre Y (cy)": round(self.patient_window.bar_cy, 2),
             "Clic X": round(clic_x, 2) if clic_x is not None else "NA",
             "Clic Y": round(clic_y, 2) if clic_y is not None else "NA",
-            "Stimulation": "active" if self.stimulation_active else "inactive"
+            "Stimulation": "active" if self.stimulation_active else "inactive",
+            "Contact stimulation": self.input_contacts.text(),
+            "Intensité (mA)": self.input_intensity.text(),
+            "Durée (ms)": self.input_duration.text()
         })
 
         conn = sqlite3.connect(DB_FILE)
@@ -277,3 +282,31 @@ class PreviewWidget(QWidget):
             bar_y2 = self.y2 + self.frame_y
 
             painter.drawLine(int(bar_x1), int(bar_y1), int(bar_x2), int(bar_y2))
+
+if __name__ == "__main__":
+    from dialogs import SelectionPatientDialog
+
+    app = QApplication(sys.argv)
+
+    # Stockage global pour éviter le garbage collection prématuré
+    app_window = {}
+
+    def lancer_test(patient_id):
+        screen = QApplication.primaryScreen()
+        geometry = screen.availableGeometry()
+
+        class DummyScreen:
+            def geometry(self):
+                return geometry
+
+        screen_patient = DummyScreen()
+        screen_experimenter = DummyScreen()
+
+        # On garde une référence dans app_window
+        app_window["main"] = BisectionTest(patient_id, screen_patient, screen_experimenter)
+        app_window["main"].show()
+
+    dialog = SelectionPatientDialog(callback=lancer_test)
+    dialog.exec()
+
+    sys.exit(app.exec())
