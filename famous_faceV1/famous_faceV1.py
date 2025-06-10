@@ -121,9 +121,29 @@ class FamousFaceTest(QMainWindow):
 
         self.patient_window = PatientWindow()
         self.waiting_screen = WaitingScreen()
+        
+        # 🆕 Gestion multi-écrans
+        screens = QApplication.screens()
+        if len(screens) >= 2:
+            primary_screen = screens[0]
+            secondary_screen = screens[1]
+        
+            # Interface expérimentateur sur écran principal
+            self.move(primary_screen.geometry().topLeft())
+            self.showFullScreen()
+        
+            # Interface patient sur écran secondaire
+            self.patient_window.move(secondary_screen.geometry().topLeft())
+            self.patient_window.showFullScreen()
+        else:
+            print("⚠️ Moins de deux écrans détectés. Affichage en mode fenêtré.")
+            self.setGeometry(100, 100, 1200, 600)
+            self.patient_window.setGeometry(920, 100, 800, 600)
+            self.show()
+            self.patient_window.show()
+        
         self.init_ui()
         self.installEventFilter(self)
-        self.patient_window.show()
 
     def init_test_state(self):
         self.current_index = 0
