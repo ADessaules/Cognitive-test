@@ -178,11 +178,33 @@ class MatchingUnknownTest(QMainWindow):
 
         self.patient_window = PatientWindow()
         self.waiting_screen = WaitingScreen()
-        self.waiting_screen.show()
-        self.patient_window.show()
+        
+        screens = QApplication.screens()
+        if len(screens) >= 2:
+            primary_screen = screens[0]
+            secondary_screen = screens[1]
+        
+            # Expérimentateur en plein écran sur l’écran principal
+            self.move(primary_screen.geometry().topLeft())
+            self.showFullScreen()
+        
+            # Patient en plein écran sur le second écran
+            self.patient_window.move(secondary_screen.geometry().topLeft())
+            self.patient_window.showFullScreen()
+            self.waiting_screen.move(secondary_screen.geometry().topLeft())
+            self.waiting_screen.showFullScreen()
+        else:
+            print("⚠️ Un seul écran détecté. Utilisation en mode fenêtré.")
+            self.setGeometry(100, 100, 1200, 600)
+            self.patient_window.setGeometry(920, 100, 800, 600)
+            self.waiting_screen.setGeometry(300, 300, 600, 400)
+            self.show()
+            self.patient_window.show()
+            self.waiting_screen.show()
+        
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setFocus()
-
+        
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Type.MouseButtonPress and self.session_active:
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
