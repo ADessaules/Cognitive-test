@@ -492,24 +492,33 @@ class FamousFaceTest(QMainWindow):
             return
     
         self.session_active = False
-        self.timer.stop()  # ⬅️ Ajout important ici
+        self.timer.stop()
         self.patient_window.hide()
-
+    
         df_trials = pd.DataFrame(self.trial_results)
         df_clicks = pd.DataFrame(self.nurse_clicks)
         full_df = pd.concat([df_trials, df_clicks], ignore_index=True)
-
+    
+        if full_df.empty:
+            QMessageBox.information(self, "Info", "Aucune donnée à sauvegarder.")
+            return
+    
         now = datetime.now()
         timestamp = now.strftime("%Y_%m_%d_%H%M")
         prenom_nom = self.participant_name.replace(" ", "").lower()
         filename = f"{prenom_nom}_{timestamp}_{self.stim_contact}-{self.stim_intensite}-{self.stim_duree}_{self.test_name}.xlsx"
-        output_path = os.path.join(os.path.dirname(__file__), filename)
-        
+    
+        patients_root = Path(__file__).resolve().parent.parent / "Patients"
+        patient_dir = patients_root / self.participant_name
+        patient_dir.mkdir(parents=True, exist_ok=True)  # Crée si manquant
+    
+        output_path = patient_dir / filename
+    
         try:
             full_df.to_excel(output_path, index=False, engine='openpyxl')
-            QMessageBox.information(self, "Fin", f"Test terminé. Résultats sauvegardés dans {filename}.")
+            QMessageBox.information(self, "Fin", f"Test terminé.\nFichier enregistré dans :\n{output_path}")
         except PermissionError:
-            QMessageBox.critical(self, "Erreur", "Le fichier Excel est ouvert. Fermez-le puis relancez.")
+            QMessageBox.critical(self, "Erreur", "Erreur : le fichier est ouvert ailleurs.\nFermez-le puis réessayez.")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
