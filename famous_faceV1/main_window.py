@@ -18,6 +18,13 @@ class MainApp(QWidget):
         self.setGeometry(100, 100, 600, 700)
         
         self.layout = QVBoxLayout()
+
+        self.btn_interface_principale = QPushButton("Aller à l'interface principale")
+        self.btn_interface_principale.clicked.connect(self.go_to_main_interface)
+        
+        self.btn_test_famous_face = QPushButton("Aller au test Famous Face")
+        self.btn_test_famous_face.clicked.connect(self.go_to_famous_face_test)
+        
         self.btn_creer_patient = QPushButton("Créer Patient")
         self.btn_creer_patient.setFixedHeight(60)
         self.btn_creer_patient.setStyleSheet("font-size: 18px;")
@@ -46,7 +53,8 @@ class MainApp(QWidget):
         self.btn_supprimer_patient.clicked.connect(self.afficher_liste_patients_supprimer)
         self.btn_bisection.clicked.connect(self.selectionner_patient_pour_bisection)        
 
-
+        self.layout.addWidget(self.btn_interface_principale)
+        self.layout.addWidget(self.btn_test_famous_face)
         self.layout.addWidget(self.btn_creer_patient)
         self.layout.addWidget(self.btn_selection_celeb)
         self.layout.addWidget(self.btn_liste_patients)
@@ -55,6 +63,20 @@ class MainApp(QWidget):
 
         
         self.setLayout(self.layout)
+
+    def go_to_main_interface(self):
+        try:
+            self.close()
+            subprocess.Popen(["python", "interface.py"])
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Erreur lors de l'ouverture de l'interface principale : {e}")
+
+    def go_to_famous_face_test(self):
+        try:
+            self.close()
+            subprocess.Popen(["python", "famous_faceV1/main.py"])
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Erreur lors de l'ouverture du test : {e}")
 
     def afficher_liste_patients(self):
         self.liste_patients_fenetre = ListePatients()
