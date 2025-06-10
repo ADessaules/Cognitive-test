@@ -14,8 +14,8 @@ from constant import DB_FILE, DOSSIER_PATIENTS
 class BisectionTest(QWidget):
     def __init__(self, patient_id, screen_patient, screen_experimenter):
         super().__init__()
-        self.screen_patient = screen_patient  # <-- À ajouter
-        self.screen_experimenter = screen_experimenter  # <-- À ajouter
+        self.screen_patient = screen_patient
+        self.screen_experimenter = screen_experimenter
         self.setWindowTitle("Contrôle du Test de Bisection")
         self.patient_id = patient_id
         self.attempt = 0
@@ -29,7 +29,7 @@ class BisectionTest(QWidget):
         self.setGeometry(screen_experimenter.geometry())
         self.move(screen_experimenter.geometry().topLeft())
 
-        # --- Boutons principaux ---
+        # Boutons principaux
         self.btn_start = QPushButton("Démarrer le test")
         self.btn_stop = QPushButton("Arrêter et sauvegarder")
         self.btn_toggle_stimulation = QPushButton("Activer la stimulation")
@@ -46,13 +46,13 @@ class BisectionTest(QWidget):
 
         layout = QVBoxLayout()
 
-        # --- Sélection du patient ---
+        # Sélection du patient
         self.patient_selector = QComboBox()
         self.populate_patient_list()
         layout.addWidget(QLabel("Sélectionnez un patient :"))
         layout.addWidget(self.patient_selector)
 
-        # --- Section Stimulation ---
+        # Section Stimulation
         stimulation_group = QGroupBox("Paramètres de stimulation :")
         stimulation_layout = QFormLayout()
         self.input_contacts = QLineEdit()
@@ -64,26 +64,26 @@ class BisectionTest(QWidget):
         stimulation_group.setLayout(stimulation_layout)
         layout.addWidget(stimulation_group)
 
-        # --- Section Contrôle Test ---
+        # Section Contrôle Test
         controls_layout = QHBoxLayout()
         controls_layout.addWidget(self.btn_start)
         controls_layout.addWidget(self.btn_stop)
         layout.addLayout(controls_layout)
 
-        # --- Section Stimulation active/inactive ---
+        # Section Stimulation active/inactive
         stimulation_state_layout = QHBoxLayout()
         stimulation_state_layout.addWidget(self.btn_toggle_stimulation)
         stimulation_state_layout.addWidget(self.label_stimulation)
         layout.addLayout(stimulation_state_layout)
 
-        # --- Section Preview ---
+        # Section Preview
         hbox = QHBoxLayout()
         hbox.addStretch()
         hbox.addWidget(self.preview)
         hbox.addStretch()
         layout.addLayout(hbox)
 
-        # --- Section Validation ---
+        # Section Validation
         bottom_buttons_layout = QHBoxLayout()
         bottom_buttons_layout.addWidget(self.btn_start)
         bottom_buttons_layout.addWidget(self.btn_stop)
