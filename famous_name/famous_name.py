@@ -280,7 +280,6 @@ class FamousNameTest(QMainWindow):
                 label.setStyleSheet(f"font-size: 18px; border: 4px solid {color}; margin: 5px;")
 
         self.current_index += 1
-        QTimer.singleShot(self.timer_duration * 1000 if self.mode == "timer" else 300, self.show_triplet)
 
     def handle_timeout(self):
         if not self.session_active:
@@ -294,7 +293,6 @@ class FamousNameTest(QMainWindow):
     
         self.record_result(None, False)
         self.current_index += 1
-        QTimer.singleShot(self.timer_duration * 1000 if self.mode == "timer" else 300, self.show_triplet)
 
     def record_result(self, index, is_famous):
         now = time.time()
