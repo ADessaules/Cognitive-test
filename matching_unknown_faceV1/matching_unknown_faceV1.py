@@ -66,7 +66,7 @@ class MatchingUnknownTest(QMainWindow):
         super().__init__()
         self.setWindowTitle("Matching Unknown Test - Exp\u00e9rimentateur")
         self.setGeometry(100, 100, 1200, 600)
-        self.image_folder = os.path.join(os.path.dirname(__file__), "image_matching_unknown_faceV1")
+        self.image_folder = os.path.join(os.path.dirname(__file__), "matching_unknown_faceV1")
         self.test_name = "matching_unknown"
         self.timer = QTimer()
         self.timer.timeout.connect(self.advance_by_timer)
