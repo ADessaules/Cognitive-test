@@ -9,7 +9,7 @@ from constant import DB_FILE, DOSSIER_PATIENTS
 from liste_patients import ListePatients
 from preselection_celeb import SelectionCelebrites
 from dialogs import SelectionPatientDialog
-from bisection_test import BisectionTest
+from bisection_test.bisection_test import BisectionTest
 from creation_patient import creer_patient
 
 class MainApp(QWidget):
