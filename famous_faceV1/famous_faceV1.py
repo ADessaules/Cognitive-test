@@ -340,6 +340,25 @@ class FamousFaceTest(QMainWindow):
                 self.show_triplet()
     
             elif self.session_active and self.mode == "space":
+                now = time.time()
+                elapsed_since_start = round(now - self.session_start_time, 3)
+                reaction_time = round(now - self.start_time, 3)
+            
+                # Si aucun clic n'a été enregistré pour ce triplet
+                if self.selected_index is None:
+                    self.trial_results.append({
+                        "id_essai": self.current_index + 1,
+                        "temps_total_depuis_debut": elapsed_since_start,
+                        "image_choisie": "aucune",
+                        "correct": False,
+                        "temps_reponse": reaction_time,
+                        "horodatage_stimulation": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "triplet_nom": self.current_triplet_name,
+                        "participant": self.participant_name,
+                        "mode": self.mode,
+                        "contact_stimulation": self.stim_contact
+                    })
+            
                 self.current_index += 1
                 self.show_triplet()
                 
