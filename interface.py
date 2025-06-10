@@ -116,7 +116,7 @@ class MainWindow(QMainWindow):
         elif test_name == "bisection_test":
             try:
                 self.hide()
-                subprocess.Popen(["python", "./famous_faceV1/bisection_test.py"])
+                subprocess.Popen(["python", "./bisection_test/bisection_test.py"])
             except Exception as e:
                 print(f"Erreur lors du lancement du test : {e}")
     
