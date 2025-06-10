@@ -7,6 +7,7 @@ import time
 import pandas as pd
 from datetime import datetime
 import os
+import subprocess
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from constant import DB_FILE, DOSSIER_PATIENTS
@@ -207,6 +208,7 @@ class BisectionTest(QWidget):
         self.export_results()
         self.patient_window.close()
         self.close()
+        subprocess.Popen(["python", "interface.py"])
 
     def export_results(self):
         if not self.trial_data:
