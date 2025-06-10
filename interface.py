@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QLabel, QWid
 from PyQt6.QtCore import Qt
 from famous_faceV1.creation_patient import creer_patient
 from constant import DB_FILE, DOSSIER_PATIENTS
-
+from famous_faceV1.detail_patient import PatientDetailsWindow
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -38,9 +38,14 @@ class MainWindow(QMainWindow):
         btn_creer_patient.setStyleSheet("font-size: 20px; padding: 15px;")
         btn_creer_patient.clicked.connect(lambda: creer_patient(self))
 
+        btn_detail_patient = QPushButton("Détail patient")
+        btn_detail_patient.setStyleSheet("font-size: 20px; padding: 15px;")
+        btn_detail_patient.clicked.connect(self.show_patient_details)
+
         layout.addWidget(title)
         layout.addWidget(btn_creer_patient)
         layout.addWidget(btn_tests)
+        layout.addWidget(btn_detail_patient)
         
         page = QWidget()
         page.setLayout(layout)
@@ -107,6 +112,10 @@ class MainWindow(QMainWindow):
                 subprocess.Popen(["python", "./famous_faceV1/bisection_test.py"])
             except Exception as e:
                 print(f"Erreur lors du lancement du test : {e}")
+    
+    def show_patient_details(self):
+        self.details_window = PatientDetailsWindow(self)
+        self.details_window.exec()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
