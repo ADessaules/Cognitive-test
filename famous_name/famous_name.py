@@ -220,32 +220,34 @@ class FamousNameTest(QMainWindow):
                 widget = layout.itemAt(i).widget()
                 if widget:
                     widget.setParent(None)
-
+    
+        self.experimenter_labels.clear()  # 🟢 CORRECTION ICI
+    
         if self.current_index >= len(self.current_triplets):
             self.end_session()
             return
-
+    
         triplet = self.current_triplets[self.current_index]
         self.start_time = time.time()
         famous = triplet[0]
         shuffled = triplet[:]
         random.shuffle(shuffled)
         self.flags = [name == famous for name in shuffled]
-
+    
         def make_handler(is_famous, idx):
             return lambda: self.handle_click(is_famous, idx, shuffled)
-
+    
         handlers = [make_handler(flag, i) for i, flag in enumerate(self.flags)]
-
+    
         self.patient_window.show_names(shuffled, handlers)
-
+    
         for name in shuffled:
             label = QLabel(name)
             label.setFixedSize(250, 100)
             label.setStyleSheet("font-size: 18px; border: 2px solid gray; margin: 5px;")
             self.name_layout.addWidget(label)
             self.experimenter_labels.append(label)
-
+    
         if self.mode == "timer":
             self.timer.start(self.timer_duration * 1000)
 
@@ -283,9 +285,16 @@ class FamousNameTest(QMainWindow):
     def handle_timeout(self):
         if not self.session_active:
             return
+    
+        self.timer.stop()
+    
+        # Affichage neutre sur l'interface expérimentateur
+        for label in self.experimenter_labels:
+            label.setStyleSheet("font-size: 18px; border: 4px solid gray; margin: 5px;")
+    
         self.record_result(None, False)
         self.current_index += 1
-        self.show_triplet()
+        QTimer.singleShot(300, self.show_triplet)
 
     def record_result(self, index, is_famous):
         now = time.time()
