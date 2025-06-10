@@ -280,7 +280,7 @@ class MatchingUnknownTest(QMainWindow):
         now = datetime.now().strftime("%Y_%m_%d_%H%M")
         name = self.patient_selector.currentText().replace(" ", "_")
         filename = f"{name}_{now}_{self.contact}-{self.intensite}-{self.duree}_{self.test_name}.xlsx"
-        output_dir = os.path.join(os.path.dirname(__file__), "matching_unknown_faceV1")
+        output_dir = self.image_folder
         os.makedirs(output_dir, exist_ok=True)
         output_path = os.path.join(output_dir, filename)
         df.to_excel(output_path, index=False)
