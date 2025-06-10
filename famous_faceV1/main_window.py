@@ -75,9 +75,9 @@ class MainApp(QWidget):
     def go_to_famous_face_test(self):
         try:
             self.close()
-            subprocess.Popen(["python", "famous_faceV1/main.py"])
+            subprocess.Popen(["python", "famous_faceV1/famous_faceV1.py"])
         except Exception as e:
-            QMessageBox.critical(self, "Erreur", f"Erreur lors de l'ouverture du test : {e}")
+            QMessageBox.critical(self, "Erreur", f"Erreur lors de l'ouverture du test Famous Face : {e}")
 
     def afficher_liste_patients(self):
         self.liste_patients_fenetre = ListePatients()
