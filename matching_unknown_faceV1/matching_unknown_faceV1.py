@@ -8,6 +8,7 @@ from pathlib import Path
 from datetime import datetime
 import sys, os, random, time
 import pandas as pd
+import subprocess
 
 
 class WaitingScreen(QWidget):
@@ -103,6 +104,9 @@ class MatchingUnknownTest(QMainWindow):
         self.setCentralWidget(central)
         layout = QHBoxLayout()
         left_layout = QVBoxLayout()
+        btn_retour_interface = QPushButton("Retour à l'interface")
+        btn_retour_interface.clicked.connect(self.return_to_main_interface)
+        left_layout.addWidget(btn_retour_interface)
 
         self.patient_selector = QComboBox()
         self.patient_selector.addItem("-- Aucun --")
@@ -270,6 +274,17 @@ class MatchingUnknownTest(QMainWindow):
             self.waiting_screen.close()
         self.timer.stop()
         self.session_active = False
+
+    def return_to_main_interface(self):
+        try:
+            if self.patient_window:
+                self.patient_window.close()
+            if self.waiting_screen:
+                self.waiting_screen.close()
+            self.close()
+            subprocess.Popen(["python", "interface.py"])
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Impossible de retourner à l'interface principale : {e}")
 
 
 if __name__ == "__main__":
