@@ -116,6 +116,16 @@ class ImageSemanticMatchingTest(QMainWindow):
         layout.addLayout(self.image_layout)
         central.setLayout(layout)
 
+    def clear_layout(self, layout): # faite pour eviter que les images testé ne s'accumulent sur la page de l'éxaminateur
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            child_layout = item.layout()
+            if widget:
+                widget.setParent(None)
+            elif child_layout:
+                self.clear_layout(child_layout)
+
     def prepare_test(self):
         if self.patient_selector.currentText() == "-- Aucun --" or not all([
             self.contact_input.text().strip(),
@@ -163,10 +173,7 @@ class ImageSemanticMatchingTest(QMainWindow):
         self.show_next_triplet()
 
     def show_next_triplet(self):
-        for i in reversed(range(self.image_layout.count())):
-            w = self.image_layout.itemAt(i).widget()
-            if w:
-                w.setParent(None)
+        self.clear_layout(self.image_layout)
 
         if self.index >= len(self.shuffled_triplets):
             self.save_results()
