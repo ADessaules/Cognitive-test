@@ -40,7 +40,7 @@ class PatientWindow(QWidget):
                 widget.setParent(None)
 
         for img_path, handler in zip(triplet, click_handlers):
-            pixmap = QPixmap(img_path).scaled(200, 200, Qt.AspectRatioMode.KeepAspectRatio)
+            pixmap = QPixmap(img_path).scaled(350, 350, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
             label = QLabel()
             label.setPixmap(pixmap)
             label.mousePressEvent = handler
