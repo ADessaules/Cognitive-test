@@ -182,7 +182,7 @@ class ImageSemanticMatchingTest(QMainWindow):
         test_path, correct_path, distractor_path = self.shuffled_triplets[self.index]
         options = [correct_path, distractor_path]
         random.shuffle(options)
-        is_correct_map = {opt: opt == correct_path for opt in options}
+        is_correct_map = {opt: os.path.basename(opt) == os.path.basename(correct_path) for opt in options}
         self.start_time = time.time()
 
         def make_handler(selected_img, btn):
@@ -192,7 +192,7 @@ class ImageSemanticMatchingTest(QMainWindow):
                     "id_essai": self.index + 1,
                     "temps_reponse": rt,
                     "image_choisie": os.path.basename(selected_img),
-                    "correct": is_correct_map[selected_img],
+                    "correct": os.path.basename(selected_img) == os.path.basename(correct_path),
                     "image_testee": os.path.basename(test_path),
                     "participant": self.patient_selector.currentText(),
                     "contact_stimulation": self.contact,
