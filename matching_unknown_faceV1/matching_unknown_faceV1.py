@@ -193,6 +193,21 @@ class MatchingUnknownTest(QMainWindow):
         return super().eventFilter(obj, event)
 
     def advance_by_timer(self):
+        # Enregistre une non-réponse
+        self.session_results.append({
+            "id_essai": self.index + 1,
+            "temps_reponse": self.timer_duration,
+            "image_choisie": "aucune",
+            "correct": False,
+            "triplet_nom": self.shuffled_triplets[self.index][0].split("_")[1],
+            "participant": self.patient_selector.currentText(),
+            "contact_stimulation": self.contact,
+            "intensité": self.intensite,
+            "durée": self.duree,
+            "mode": self.mode,
+            "horodatage": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        })
+        
         self.index += 1
         self.show_next_triplet()
 
@@ -265,7 +280,10 @@ class MatchingUnknownTest(QMainWindow):
         now = datetime.now().strftime("%Y_%m_%d_%H%M")
         name = self.patient_selector.currentText().replace(" ", "_")
         filename = f"{name}_{now}_{self.contact}-{self.intensite}-{self.duree}_{self.test_name}.xlsx"
-        df.to_excel(filename, index=False)
+        output_dir = os.path.join(os.path.dirname(__file__), "matching_unknown_faceV1")
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, filename)
+        df.to_excel(output_path, index=False)
         QMessageBox.information(self, "Fin", f"Test termin\u00e9. Fichier sauvegard\u00e9 : {filename}")
 
         if self.patient_window:
