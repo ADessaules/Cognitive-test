@@ -14,6 +14,8 @@ from constant import DB_FILE, DOSSIER_PATIENTS
 class BisectionTest(QWidget):
     def __init__(self, patient_id, screen_patient, screen_experimenter):
         super().__init__()
+        self.screen_patient = screen_patient  # <-- À ajouter
+        self.screen_experimenter = screen_experimenter  # <-- À ajouter
         self.setWindowTitle("Contrôle du Test de Bisection")
         self.patient_id = patient_id
         self.attempt = 0
@@ -43,6 +45,12 @@ class BisectionTest(QWidget):
         self.preview = PreviewWidget()
 
         layout = QVBoxLayout()
+
+        # --- Sélection du patient ---
+        self.patient_selector = QComboBox()
+        self.populate_patient_list()
+        layout.addWidget(QLabel("Sélectionnez un patient :"))
+        layout.addWidget(self.patient_selector)
 
         # --- Section Stimulation ---
         stimulation_group = QGroupBox("Paramètres de stimulation :")
@@ -83,14 +91,6 @@ class BisectionTest(QWidget):
 
         self.setLayout(layout)
 
-        # --- Fenêtre Patient ---
-        self.patient_window = PatientWindow(self)
-        self.patient_window.setGeometry(screen_patient.geometry())
-        self.patient_window.move(screen_patient.geometry().topLeft())
-        self.patient_window.show()
-        self.patient_window.setFocus()
-        self.patient_window.setMouseTracking(True)
-
     def toggle_stimulation(self):
         self.stimulation_active = not self.stimulation_active
         if self.stimulation_active:
@@ -103,7 +103,23 @@ class BisectionTest(QWidget):
             self.btn_toggle_stimulation.setText("Activer la stimulation")
 
     def start_test(self):
+        selected_id = self.patient_selector.currentData()
+        if selected_id is None:
+            QMessageBox.warning(self, "Erreur", "Veuillez sélectionner un patient avant de démarrer le test.")
+            return
+
+        self.patient_id = selected_id
+        self.patient_selector.setEnabled(False)
         self.btn_start.setEnabled(False)
+
+        # Créer et afficher la fenêtre patient maintenant que l'ID est choisi
+        self.patient_window = PatientWindow(self)
+        self.patient_window.setGeometry(self.screen_patient.geometry())
+        self.patient_window.move(self.screen_patient.geometry().topLeft())
+        self.patient_window.show()
+        self.patient_window.setFocus()
+        self.patient_window.setMouseTracking(True)
+
         self.start_trial()
 
     def start_trial(self):
@@ -120,6 +136,18 @@ class BisectionTest(QWidget):
             self.patient_window.width(),
             self.patient_window.height()
         )
+
+    def populate_patient_list(self):
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, nom FROM patients")
+        self.patients = cursor.fetchall()
+        conn.close()
+
+        self.patient_selector.addItem("Sélectionnez un patient", None)
+        for pid, name in self.patients:
+            self.patient_selector.addItem(name, pid)
+
 
     def record_click(self, clic_x, clic_y):
         now = time.time()
@@ -284,29 +312,16 @@ class PreviewWidget(QWidget):
             painter.drawLine(int(bar_x1), int(bar_y1), int(bar_x2), int(bar_y2))
 
 if __name__ == "__main__":
-    from dialogs import SelectionPatientDialog
-
     app = QApplication(sys.argv)
 
-    # Stockage global pour éviter le garbage collection prématuré
+    screens = QApplication.screens()
+
+
+    screen_experimenter = screens[0]
+    screen_patient = screens[1]
+
     app_window = {}
-
-    def lancer_test(patient_id):
-        screen = QApplication.primaryScreen()
-        geometry = screen.availableGeometry()
-
-        class DummyScreen:
-            def geometry(self):
-                return geometry
-
-        screen_patient = DummyScreen()
-        screen_experimenter = DummyScreen()
-
-        # On garde une référence dans app_window
-        app_window["main"] = BisectionTest(patient_id, screen_patient, screen_experimenter)
-        app_window["main"].show()
-
-    dialog = SelectionPatientDialog(callback=lancer_test)
-    dialog.exec()
+    app_window["main"] = BisectionTest(patient_id=None, screen_patient=screen_patient, screen_experimenter=screen_experimenter)
+    app_window["main"].show()
 
     sys.exit(app.exec())
