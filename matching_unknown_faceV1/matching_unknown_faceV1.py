@@ -304,15 +304,23 @@ class MatchingUnknownTest(QMainWindow):
         df = pd.concat([df_trials, df_clicks], ignore_index=True)
         if df.empty:
             return
+    
         now = datetime.now().strftime("%Y_%m_%d_%H%M")
         name = self.patient_selector.currentText().replace(" ", "_")
         filename = f"{name}_{now}_{self.contact}-{self.intensite}-{self.duree}_{self.test_name}.xlsx"
-        output_dir = self.output_folder
-        os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, filename)
-        df.to_excel(output_path, index=False)
-        QMessageBox.information(self, "Fin", f"Test termin\u00e9. Fichier sauvegard\u00e9 : {filename}")
-
+    
+        patients_root = Path(__file__).resolve().parent.parent / "Patients"
+        patient_dir = patients_root / name
+        patient_dir.mkdir(parents=True, exist_ok=True)  # Crée le dossier s'il n'existe pas
+    
+        output_path = patient_dir / filename
+    
+        try:
+            df.to_excel(output_path, index=False)
+            QMessageBox.information(self, "Fin", f"Test terminé. Fichier sauvegardé dans : {output_path}")
+        except PermissionError:
+            QMessageBox.critical(self, "Erreur", "Le fichier est ouvert ailleurs. Fermez-le puis réessayez.")
+    
         if self.patient_window:
             self.patient_window.close()
         if self.waiting_screen:
