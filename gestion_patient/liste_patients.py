@@ -4,7 +4,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from constant import DB_FILE, DOSSIER_PATIENTS
-from detail_patient import PatientDetailsWindow
+from gestion_patient.detail_patient import PatientDetailsWindow
 
 # --- Fenêtre de liste des patients ---
 class ListePatients(QDialog):

@@ -2,9 +2,9 @@ import sys
 import subprocess
 from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QLabel, QWidget, QPushButton, QStackedWidget, QListWidget
 from PyQt6.QtCore import Qt
-from famous_faceV1.creation_patient import creer_patient
+from gestion_patient.creation_patient import creer_patient
 from constant import DB_FILE, DOSSIER_PATIENTS
-from famous_faceV1.detail_patient import PatientDetailsWindow
+from gestion_patient.detail_patient import PatientDetailsWindow
 
 class MainWindow(QMainWindow):
     def __init__(self):

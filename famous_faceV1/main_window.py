@@ -6,11 +6,11 @@ import sqlite3
 import subprocess
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from constant import DB_FILE, DOSSIER_PATIENTS
-from liste_patients import ListePatients
+from gestion_patient.liste_patients import ListePatients
 from preselection_celeb import SelectionCelebrites
 from dialogs import SelectionPatientDialog
 from bisection_test.bisection_test import BisectionTest
-from creation_patient import creer_patient
+from gestion_patient.creation_patient import creer_patient
 
 class MainApp(QWidget):
     def __init__(self):
