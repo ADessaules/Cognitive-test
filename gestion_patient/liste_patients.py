@@ -29,7 +29,19 @@ class ListePatients(QDialog):
         self.setLayout(self.layout)
         
         self.liste_widget.itemClicked.connect(self.supprimer_patient if supprimer else self.afficher_details_patient)
+        
+    def afficher_details_patient(self, item):
+        patient_name = item.text()
+        patient_id = None
+        for p_id, p_name in self.patients:
+            if p_name == patient_name:
+                patient_id = p_id
+                break
     
+        if patient_id is not None:
+            self.details_fenetre = PatientDetailsWindow(patient_id, patient_name)
+            self.details_fenetre.exec()
+            
     def supprimer_patient(self, item):
         index = self.liste_widget.row(item)
         patient_id, patient_nom = self.patients[index]
