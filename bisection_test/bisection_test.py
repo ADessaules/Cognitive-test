@@ -34,6 +34,8 @@ class BisectionTest(QWidget):
         self.btn_start = QPushButton("Démarrer le test")
         self.btn_stop = QPushButton("Arrêter et sauvegarder")
         self.btn_toggle_stimulation = QPushButton("Activer la stimulation")
+        self.btn_toggle_stimulation.setFixedHeight(60)
+        self.btn_toggle_stimulation.setStyleSheet("font-size: 18px;")
 
         # Connexion des signaux
         self.btn_start.clicked.connect(self.start_test)
@@ -89,6 +91,8 @@ class BisectionTest(QWidget):
         bottom_buttons_layout.addWidget(self.btn_start)
         bottom_buttons_layout.addWidget(self.btn_stop)
         layout.addLayout(bottom_buttons_layout)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setMouseTracking(True)
 
         self.setLayout(layout)
 
@@ -234,6 +238,15 @@ class BisectionTest(QWidget):
         result = cursor.fetchone()
         conn.close()
         return result[0] if result else f"patient_{self.patient_id}"
+    
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_S:
+            self.toggle_stimulation()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.RightButton:
+            self.toggle_stimulation()
+
 
 class PatientWindow(QWidget):
     def __init__(self, main_app):
