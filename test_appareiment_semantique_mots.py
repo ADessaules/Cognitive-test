@@ -156,6 +156,10 @@ class SemanticMatchingExaminateur(QMainWindow):
         layout = QHBoxLayout()
         left_layout = QVBoxLayout()
 
+        btn_retour = QPushButton("Retour à l'interface")
+        btn_retour.clicked.connect(self.retour_interface)
+        left_layout.addWidget(btn_retour)
+
         self.patient_selector = QComboBox()
         self.patient_selector.addItem("-- Aucun --")
         patients_path = Path(__file__).resolve().parent / "Patients"
@@ -197,6 +201,17 @@ class SemanticMatchingExaminateur(QMainWindow):
         layout.addLayout(left_layout)
         layout.addLayout(self.right_layout)
         central.setLayout(layout)
+
+    def retour_interface(self):
+        try:
+            import subprocess
+            import os
+            interface_path = os.path.join(os.path.dirname(__file__), "interface.py")
+            subprocess.Popen(["python", interface_path], shell=True)
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Impossible de lancer l'interface principale :\n{e}")
+        finally:
+            self.close()
 
     def prepare_test(self):
         if self.patient_selector.currentText() == "-- Aucun --" or not all([
