@@ -96,23 +96,20 @@ class BisectionTest(QWidget):
 
         self.setLayout(layout)
 
-    from PyQt6.QtCore import QTimer
-
     def toggle_stimulation(self):
         if not self.stimulation_active:
             try:
                 duration = int(self.input_duration.text())
             except Exception as e:
                 print(f"Erreur de lecture de durée : {e}")
-                duration = 0  # Valeur par défaut
+                duration = 0
 
             self.stimulation_active = True
             self.update_stimulus_display(True)
 
+            self.record_stimulation_activation()
+
             QTimer.singleShot(duration, self.deactivate_stimulation)
-        else:
-            self.deactivate_stimulation()
-    
 
     def deactivate_stimulation(self):
         self.stimulation_active = False
@@ -125,8 +122,6 @@ class BisectionTest(QWidget):
         else:
             self.btn_toggle_stimulation.setText("Activer la stimulation")
             self.label_stimulation.setText("Stimulation désactivée.")
-
-
 
     def start_test(self):
         selected_id = self.patient_selector.currentData()
@@ -174,7 +169,6 @@ class BisectionTest(QWidget):
         for pid, name in self.patients:
             self.patient_selector.addItem(name, pid)
 
-
     def record_click(self, clic_x, clic_y):
         now = time.time()
         response_time = now - self.trial_start_time
@@ -188,7 +182,29 @@ class BisectionTest(QWidget):
 
         now_datetime = datetime.now()
 
-        self.trial_data.append({
+        if self.stimulation_active:
+            trial_entry = {
+                "Essai": "",
+                "Date": "",
+                "Heure": "",
+                "Temps total (s)": "",
+                "Réponse (écart en cm)": "",
+                "Temps de réponse (s)": "",
+                "x1": "",
+                "y1": "",
+                "x2": "",
+                "y2": "",
+                "Centre X (cx)": "",
+                "Centre Y (cy)": "",
+                "Clic X": "",
+                "Clic Y": "",
+                "Stimulation": "active",
+                "Contact stimulation": self.input_contacts.text(),
+                "Intensité (mA)": self.input_intensity.text(),
+                "Durée (ms)": self.input_duration.text()
+            }
+        else:
+            trial_entry = {
             "Essai": self.attempt + 1,
             "Date": now_datetime.strftime("%Y-%m-%d"),
             "Heure": now_datetime.strftime("%H:%M:%S"),
@@ -203,11 +219,13 @@ class BisectionTest(QWidget):
             "Centre Y (cy)": round(self.patient_window.bar_cy, 2),
             "Clic X": round(clic_x, 2) if clic_x is not None else "NA",
             "Clic Y": round(clic_y, 2) if clic_y is not None else "NA",
-            "Stimulation": "active" if self.stimulation_active else "inactive",
-            "Contact stimulation": self.input_contacts.text(),
-            "Intensité (mA)": self.input_intensity.text(),
-            "Durée (ms)": self.input_duration.text()
-        })
+            "Stimulation": "",
+            "Contact stimulation": "",
+            "Intensité (mA)": "",
+            "Durée (ms)": ""
+        }
+
+        self.trial_data.append(trial_entry)
 
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
@@ -227,6 +245,7 @@ class BisectionTest(QWidget):
             self.export_results()
             self.patient_window.close()
             self.close()
+            subprocess.Popen(["python", "interface.py"])
 
     def stop_test(self):
         QMessageBox.information(self, "Test interrompu", "Test de bisection arrêté prématurément.")
@@ -234,6 +253,28 @@ class BisectionTest(QWidget):
         self.patient_window.close()
         self.close()
         subprocess.Popen(["python", "interface.py"])
+
+    def record_stimulation_activation(self):
+        self.trial_data.append({
+            "Essai": "",
+            "Date": "",
+            "Heure": "",
+            "Temps total (s)": "",
+            "Réponse (écart en cm)": "",
+            "Temps de réponse (s)": "",
+            "x1": "",
+            "y1": "",
+            "x2": "",
+            "y2": "",
+            "Centre X (cx)": "",
+            "Centre Y (cy)": "",
+            "Clic X": "",
+            "Clic Y": "",
+            "Stimulation": "active",
+            "Contact stimulation": self.input_contacts.text(),
+            "Intensité (mA)": self.input_intensity.text(),
+            "Durée (ms)": self.input_duration.text()
+        })
 
     def export_results(self):
         if not self.trial_data:
@@ -267,7 +308,6 @@ class BisectionTest(QWidget):
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.RightButton:
             self.toggle_stimulation()
-
 
 class PatientWindow(QWidget):
     def __init__(self, main_app):
@@ -349,15 +389,10 @@ class PreviewWidget(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-
     screens = QApplication.screens()
-
-
     screen_experimenter = screens[0]
     screen_patient = screens[1]
-
     app_window = {}
     app_window["main"] = BisectionTest(patient_id=None, screen_patient=screen_patient, screen_experimenter=screen_experimenter)
     app_window["main"].show()
-
     sys.exit(app.exec())
