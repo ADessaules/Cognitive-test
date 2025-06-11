@@ -42,10 +42,15 @@ class MainWindow(QMainWindow):
         btn_detail_patient.setStyleSheet("font-size: 20px; padding: 15px;")
         btn_detail_patient.clicked.connect(self.show_patient_details)
 
+        btn_supprimer_patient = QPushButton("Supprimer un patient")
+        btn_supprimer_patient.setStyleSheet("font-size: 20px; padding: 15px;")
+        btn_supprimer_patient.clicked.connect(self.delete_patient)
+
         layout.addWidget(title)
         layout.addWidget(btn_creer_patient)
         layout.addWidget(btn_tests)
         layout.addWidget(btn_detail_patient)
+        layout.addWidget(btn_supprimer_patient)
         
         page = QWidget()
         page.setLayout(layout)
@@ -123,6 +128,12 @@ class MainWindow(QMainWindow):
     def show_patient_details(self):
         self.details_window = PatientDetailsWindow(self)
         self.details_window.exec()
+
+    def delete_patient(self):
+        from gestion_patient.liste_patients import ListePatients
+        self.supprimer_window = ListePatients(supprimer=True)
+        self.supprimer_window.exec()
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

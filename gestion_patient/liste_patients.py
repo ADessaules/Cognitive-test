@@ -5,6 +5,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from constant import DB_FILE, DOSSIER_PATIENTS
 from gestion_patient.detail_patient import PatientDetailsWindow
+import shutil
 
 # --- Fenêtre de liste des patients ---
 class ListePatients(QDialog):
@@ -31,19 +32,21 @@ class ListePatients(QDialog):
     
     def supprimer_patient(self, item):
         index = self.liste_widget.row(item)
-        patient_id = self.patients[index][0]
+        patient_id, patient_nom = self.patients[index]
+
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
         cursor.execute("DELETE FROM selections WHERE patient_id = ?", (patient_id,))
         cursor.execute("DELETE FROM patients WHERE id = ?", (patient_id,))
         conn.commit()
         conn.close()
+
+        dossier_patient = os.path.join(DOSSIER_PATIENTS, patient_nom)
+        if os.path.exists(dossier_patient):
+            shutil.rmtree(dossier_patient)
+            print(f"Dossier {dossier_patient} supprimé avec succès.")
+        else:
+            print(f"Dossier {dossier_patient} introuvable.")
+
         QMessageBox.information(self, "Supprimé", "Le patient a été supprimé avec succès.")
         self.liste_widget.takeItem(index)
-    
-    def afficher_details_patient(self, item):
-        index = self.liste_widget.row(item)
-        patient_id = self.patients[index][0]
-        patient_name = self.patients[index][1]  # 👈 ajoute cette ligne
-        self.details_fenetre = DetailsPatient(patient_id, patient_name)
-        self.details_fenetre.show()
