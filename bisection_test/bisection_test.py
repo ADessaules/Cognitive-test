@@ -96,16 +96,37 @@ class BisectionTest(QWidget):
 
         self.setLayout(layout)
 
+    from PyQt6.QtCore import QTimer
+
     def toggle_stimulation(self):
-        self.stimulation_active = not self.stimulation_active
-        if self.stimulation_active:
-            self.label_stimulation.setText("Stimulation: ACTIVE")
-            self.label_stimulation.setStyleSheet("font-size: 16px; color: red;")
-            self.btn_toggle_stimulation.setText("Désactiver la stimulation")
+        if not self.stimulation_active:
+            try:
+                duration = int(self.input_duration.text())
+            except Exception as e:
+                print(f"Erreur de lecture de durée : {e}")
+                duration = 0  # Valeur par défaut
+
+            self.stimulation_active = True
+            self.update_stimulus_display(True)
+
+            QTimer.singleShot(duration, self.deactivate_stimulation)
         else:
-            self.label_stimulation.setText("Stimulation: inactive")
-            self.label_stimulation.setStyleSheet("font-size: 16px; color: blue;")
+            self.deactivate_stimulation()
+    
+
+    def deactivate_stimulation(self):
+        self.stimulation_active = False
+        self.update_stimulus_display(False)
+
+    def update_stimulus_display(self, active: bool):
+        if active:
+            self.btn_toggle_stimulation.setText("Stimulation en cours…")
+            self.label_stimulation.setText("Stimulation activée !")
+        else:
             self.btn_toggle_stimulation.setText("Activer la stimulation")
+            self.label_stimulation.setText("Stimulation désactivée.")
+
+
 
     def start_test(self):
         selected_id = self.patient_selector.currentData()
