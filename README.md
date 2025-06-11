@@ -49,13 +49,12 @@ L'application est pensée pour être utilisée dans un cadre de recherche ou de 
 
 Lancer l’interface principale depuis le dossier `Cognitive-test` :
 
-```bash
-python interface.py
-```
+Aller dans dist puis interface.exe.
 
 Depuis cette interface, vous pouvez :
 - Lancer les tests cognitifs
 - Gérer les patients
+- Créer un patient
 - Accéder à l’ensemble des modules via une interface centralisée
 
 ---
