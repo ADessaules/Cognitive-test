@@ -15,7 +15,19 @@ from PyQt6.QtCore import QTimer, Qt, QEvent
 import pandas as pd
 
 class WaitingScreen(QWidget):
+    """
+Classe représentant un écran d'attente simple.
+
+Utilisé avant le début du test : elle affiche un message demandant
+d'appuyer sur la touche "Espace" pour démarrer. Cette fenêtre est
+affichée sur l'écran du patient, dans le cas où le mode "barre espace"
+est activé.
+    """
     def __init__(self):
+        """
+        Écran d'attente affiché avant le démarrage du test.
+        Invite l'utilisateur à appuyer sur 'Espace' pour commencer.
+        """
         super().__init__()
         self.setWindowTitle("Écran d'attente")
         self.setGeometry(920, 100, 800, 600)
@@ -26,28 +38,80 @@ class WaitingScreen(QWidget):
         self.setLayout(layout)
 
 class PatientWindow(QWidget):
+    """
+Fenêtre affichée sur l'écran du patient pendant le test.
+
+Elle sert à montrer un triplet d’images (1 visage célèbre et 2 leurres),
+dans le but que le participant identifie la personne connue.
+Les clics sur les images sont capturés via des gestionnaires associés.
+    """
     def __init__(self):
+        """
+        Fenêtre dédiée au participant du test. Affiche les images du triplet à reconnaître.
+        Positionnée sur le second écran si disponible.
+        """
         super().__init__()
         self.setWindowTitle("Test en cours - Écran patient")
         self.setGeometry(920, 100, 800, 600)
+
+        outer_layout = QVBoxLayout()
+        outer_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
         self.image_layout = QHBoxLayout()
-        self.setLayout(self.image_layout)
+        self.image_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.image_layout.setSpacing(50)
+
+        outer_layout.addLayout(self.image_layout)
+        self.setLayout(outer_layout)
 
     def show_images(self, triplet, click_handlers):
+        """
+        Affiche un triplet d'images sur l'écran du patient.
+        
+        Args:
+            triplet (list): Liste des chemins vers les 3 images.
+            click_handlers (list): Fonctions à appeler lors du clic sur chaque image.
+        """
         for i in reversed(range(self.image_layout.count())):
             widget = self.image_layout.itemAt(i).widget()
             if widget:
                 widget.setParent(None)
 
+        screen_geometry = QApplication.primaryScreen().geometry()
+        img_width = screen_geometry.width() // 4
+        img_height = screen_geometry.height() // 2
+
         for img_path, handler in zip(triplet, click_handlers):
-            pixmap = QPixmap(img_path).scaled(500, 500, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            pixmap = QPixmap(img_path).scaled(
+                img_width, img_height,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
             label = QLabel()
             label.setPixmap(pixmap)
             label.mousePressEvent = handler
             self.image_layout.addWidget(label)
 
 class FamousFaceTest(QMainWindow):
+    """
+Fenêtre principale de l'expérimentateur.
+
+Cette interface permet de :
+- sélectionner un patient ;
+- configurer les paramètres de stimulation (contact, intensité, durée) ;
+- choisir le mode d’affichage des images ;
+- démarrer, gérer et arrêter la session de test ;
+- afficher un retour visuel des images présentées au patient.
+
+Elle orchestre toute la logique du test, de la préparation à la
+sauvegarde des résultats.
+    """
     def __init__(self):
+        """
+        Fenêtre principale de l’expérimentateur.
+        Gère la configuration du test, la sélection du patient, l'affichage des images
+        et la collecte des réponses pendant le test.
+        """
         super().__init__()
         self.setWindowTitle("Famous Face Test - Expérimentateur")
         self.setGeometry(100, 100, 1200, 600)
@@ -146,6 +210,10 @@ class FamousFaceTest(QMainWindow):
         self.installEventFilter(self)
 
     def init_test_state(self):
+        """
+        Initialise ou réinitialise toutes les variables liées à une session de test.
+        Prépare le test pour un nouvel essai.
+        """
         self.current_index = 0
         self.click_times = []
         self.error_indices = []
@@ -162,22 +230,48 @@ class FamousFaceTest(QMainWindow):
         self.experimenter_labels = []
 
     def eventFilter(self, obj, event):
+        """
+        Intercepte les clics souris pendant une session active pour les enregistrer
+        comme événements de stimulation.
+        """
         if event.type() == QEvent.Type.MouseButtonPress and self.session_active:
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            self.nurse_clicks.append({"evenement": "clic_infirmiere", "horodatage": now})
+            elapsed = round(time.time() - self.session_start_time, 3)
+
+            # Ajout immédiat dans les résultats d'essais
+            self.trial_results.append({
+                "id_essai": self.current_index + 1,
+                "temps_total_depuis_debut": elapsed,
+                "image_choisie": "",
+                "correct": "",
+                "temps_reponse": "",
+                "horodatage_stimulation": now,
+                "triplet_nom": self.current_triplet_name,
+                "participant": self.participant_name,
+                "mode": "stimulation",  # <- Remplacement du clic_infirmiere
+                "contact_stimulation": self.stim_contact,
+                "intensite": self.stim_intensite,
+                "duree": self.stim_duree
+            })
         return super().eventFilter(obj, event)
 
     def toggle_timer_input(self):
+        """
+        Affiche ou masque le champ de saisie du temps imparti en fonction du mode sélectionné.
+        """
         self.timer_input.setVisible(self.mode_selector.currentText() == "Temps imparti")
 
     def init_ui(self):
+        """
+        Initialise l'interface utilisateur : boutons, champs, sélecteurs de patient et mode.
+        Organise tous les widgets dans la fenêtre de l’expérimentateur.
+        """
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.main_layout = QHBoxLayout()
     
-        self.config_layout = QVBoxLayout()  # ✅ Do this first!
+        self.config_layout = QVBoxLayout()
     
-        # 🆕 Add buttons *after* defining self.config_layout
         btn_preselection = QPushButton("Aller à la présélection")
         btn_preselection.clicked.connect(self.launch_preselection_interface)
         btn_retour_interface = QPushButton("Retour à l'interface")
@@ -189,7 +283,6 @@ class FamousFaceTest(QMainWindow):
         self.config_layout.addWidget(QLabel("Sélectionner un patient :"))
         self.config_layout.addWidget(self.patient_selector)
     
-        # Retire prénom/nom ici si ce n’est plus utile
         self.contact_input = QLineEdit()
         self.contact_input.setPlaceholderText("Contacts de stimulation")
         self.intensite_input = QLineEdit()
@@ -228,14 +321,21 @@ class FamousFaceTest(QMainWindow):
         self.central_widget.setLayout(self.main_layout)
 
     def launch_preselection_interface(self):
+        """
+        Lance l'interface de présélection permettant au patient de choisir ses images connues.
+        """
         try:
             self.patient_window.close()
-            self.close()  # ✅ Ferme la fenêtre du test
+            self.close()
             subprocess.Popen(["python", "famous_faceV1/main.py"])
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Impossible d'ouvrir l'interface de présélection : {e}")
             
     def return_to_main_interface(self):
+        """
+        Ferme la fenêtre actuelle et relance l’interface principale.
+        Utile après un test ou depuis l’interface de présélection.
+        """
         try:
             self.patient_window.close()
             self.close()
@@ -244,6 +344,12 @@ class FamousFaceTest(QMainWindow):
             QMessageBox.critical(self, "Erreur", f"Impossible de retourner à l'interface principale : {e}")
         
     def load_patient_selection(self, patient_name):
+        """
+        Charge les images présélectionnées par un patient depuis le fichier `selection.txt`.
+        
+        Args:
+            patient_name (str): Nom du dossier patient contenant la sélection.
+        """
         if patient_name == "-- Aucun --":
             self.selected_triplets = []
             self.selection_loaded = False
@@ -286,6 +392,10 @@ class FamousFaceTest(QMainWindow):
             self.selection_loaded = False
             
     def prepare_test(self):
+        """
+        Valide les entrées de configuration et initialise la session de test.
+        Charge les triplets sélectionnés, les paramètres de stimulation et le mode d’affichage.
+        """
         contact = self.contact_input.text().strip()
         intensite = self.intensite_input.text().strip()
         duree = self.duree_input.text().strip()
@@ -329,6 +439,11 @@ class FamousFaceTest(QMainWindow):
         self.patient_window.show()
 
     def keyReleaseEvent(self, event):
+        """
+        Gère la touche Espace :
+        - Démarre la session si elle ne l’est pas encore.
+        - Passe à l’essai suivant en mode 'barre espace'.
+        """
         if event.key() == Qt.Key.Key_Space:
             if not self.session_active and self.waiting_screen.isVisible():
                 self.waiting_screen.hide()
@@ -376,13 +491,19 @@ class FamousFaceTest(QMainWindow):
                         "triplet_nom": self.current_triplet_name,
                         "participant": self.participant_name,
                         "mode": self.mode,
-                        "contact_stimulation": self.stim_contact
+                        "contact_stimulation": self.stim_contact,
+                        "intensite": self.stim_intensite,
+                        "duree": self.stim_duree
                     })
             
                 self.current_index += 1
                 self.show_triplet()
                 
     def show_triplet(self):
+        """
+        Affiche un triplet d’images sur les deux interfaces (patient + expérimentateur).
+        Gère le choix aléatoire, le marquage des bonnes réponses et lance le timer si nécessaire.
+        """
         for layout in (self.image_layout, self.patient_window.image_layout):
             for i in reversed(range(layout.count())):
                 widget = layout.itemAt(i).widget()
@@ -435,12 +556,28 @@ class FamousFaceTest(QMainWindow):
             self.timer.start(self.timer_duration * 1000)
 
     def make_click_handler(self, is_famous, index):
+        """
+        Crée une fonction handler pour capturer un clic sur une image.
+        
+        Args:
+            is_famous (bool): Indique si l'image est la bonne (célèbre).
+            index (int): Index de l'image cliquée.
+        Returns:
+            Callable: Fonction à appeler lors du clic.
+        """
         def handler(event):
             self.selected_index = index
             self.handle_click(is_famous)
         return handler
 
     def handle_click(self, is_famous):
+        """
+        Enregistre le clic de l’utilisateur, mesure le temps de réaction,
+        vérifie la justesse de la réponse et prépare l’essai suivant.
+        
+        Args:
+            is_famous (bool): Indique si l'image choisie est correcte.
+        """
         if not self.session_active:
             return
     
@@ -465,10 +602,13 @@ class FamousFaceTest(QMainWindow):
             "triplet_nom": self.current_triplet_name,
             "participant": self.participant_name,
             "mode": self.mode,
-            "contact_stimulation": self.stim_contact
+            "contact_stimulation": self.stim_contact,
+            "intensite": self.stim_intensite,
+            "duree": self.stim_duree
+
         })
     
-        # ✅ Affiche toutes les bordures sur l'interface expérimentateur
+        #Affiche toutes les bordures sur l'interface expérimentateur
         for i, label in enumerate(self.experimenter_labels):
             if i == self.selected_index:
                 color = "green" if self.flags[i] else "red"
@@ -480,6 +620,10 @@ class FamousFaceTest(QMainWindow):
         QTimer.singleShot(500, self.show_triplet)
     
     def handle_timeout(self):
+        """
+        Appelé lorsque le timer expire sans clic utilisateur.
+        Enregistre l’absence de réponse et déclenche l’essai suivant.
+        """
         self.timer.stop()
     
         if not self.session_active:
@@ -501,13 +645,19 @@ class FamousFaceTest(QMainWindow):
             "triplet_nom": self.current_triplet_name,
             "participant": self.participant_name,
             "mode": self.mode,
-            "contact_stimulation": self.stim_contact
+            "contact_stimulation": self.stim_contact,
+            "intensite": self.stim_intensite,
+            "duree": self.stim_duree
         })
     
         self.current_index += 1
         QTimer.singleShot(100, self.show_triplet)  # Déclenche l’essai suivant rapidement
 
     def end_session(self):
+        """
+        Termine la session en cours.
+        Regroupe et sauvegarde toutes les données de test dans un fichier Excel pour le patient.
+        """
         if not self.session_active:
             return
     
@@ -541,6 +691,10 @@ class FamousFaceTest(QMainWindow):
             QMessageBox.critical(self, "Erreur", "Erreur : le fichier est ouvert ailleurs.\nFermez-le puis réessayez.")
 
 if __name__ == "__main__":
+    """
+    Point d’entrée principal de l’application.
+    Initialise l'application Qt et lance l'interface de test.
+    """
     app = QApplication(sys.argv)
     window = FamousFaceTest()
     window.show()
