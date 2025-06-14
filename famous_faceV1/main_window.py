@@ -13,7 +13,22 @@ from bisection_test.bisection_test import BisectionTest
 from gestion_patient.creation_patient import creer_patient
 
 class MainApp(QWidget):
+    """
+Fenêtre principale de lancement de l’application.
+
+Permet de naviguer entre :
+- l’interface principale (autre module),
+- le test Famous Face,
+- la présélection de célébrités pour un patient,
+- la liste des patients existants.
+
+C’est l’écran d’accueil central de l'application.
+    """
     def __init__(self):
+        """
+    Initialise la fenêtre d’accueil avec tous les boutons de navigation.
+    Configure les actions liées à chaque bouton pour ouvrir les modules correspondants.
+        """
         super().__init__()
         self.setWindowTitle("Reconnaissance de célébrités")
         self.setGeometry(100, 100, 600, 700)
@@ -44,6 +59,10 @@ class MainApp(QWidget):
         self.setLayout(self.layout)
 
     def go_to_main_interface(self):
+        """
+    Ferme la fenêtre actuelle et lance l’interface principale via `interface.py`.
+    Gérée comme un nouveau processus.
+        """
         try:
             self.close()
             subprocess.Popen(["python", "interface.py"])
@@ -51,6 +70,10 @@ class MainApp(QWidget):
             QMessageBox.critical(self, "Erreur", f"Erreur lors de l'ouverture de l'interface principale : {e}")
 
     def go_to_famous_face_test(self):
+        """
+    Ferme la fenêtre actuelle et lance le script du test Famous Face.
+    Appelle le fichier `famous_faceV1.py` comme un nouveau processus.
+        """
         try:
             self.close()
             subprocess.Popen(["python", "famous_faceV1/famous_faceV1.py"])
@@ -58,14 +81,32 @@ class MainApp(QWidget):
             QMessageBox.critical(self, "Erreur", f"Erreur lors de l'ouverture du test Famous Face : {e}")
 
     def afficher_liste_patients(self):
+        """
+    Affiche la fenêtre contenant la liste des patients enregistrés.
+    Utilise la classe `ListePatients` provenant du module `gestion_patient`.
+        """
         self.liste_patients_fenetre = ListePatients()
         self.liste_patients_fenetre.show()
     
     def selectionner_patient_pour_celebrite(self):
+        """
+    Ouvre une boîte de dialogue permettant de sélectionner un patient.
+    Une fois un patient choisi, on appelle `lancer_selection_celebrite`.
+        """
         self.selection_patient_fenetre = SelectionPatientDialog(self.lancer_selection_celebrite)
         self.selection_patient_fenetre.show()
 
     def lancer_selection_celebrite(self, patient_id, patient_name):
+        """
+    Lance la fenêtre de sélection des célébrités pour le patient choisi.
+
+    - Si une présélection existe déjà dans la base, affiche une alerte.
+    - Sinon, ouvre la fenêtre de présélection avec la classe `SelectionCelebrites`.
+
+    Args:
+        patient_id (int): ID du patient sélectionné.
+        patient_name (str): Nom du patient sélectionné.
+        """
         self.selection_fenetre = SelectionCelebrites(patient_id, patient_name)
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
