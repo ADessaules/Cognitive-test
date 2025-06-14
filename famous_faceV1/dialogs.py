@@ -7,7 +7,21 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from constant import DB_FILE, DOSSIER_PATIENTS
 
 class SelectionPatientDialog(QDialog):
+    """
+Fenêtre de dialogue permettant de sélectionner un patient depuis la base de données.
+
+Une fois un patient sélectionné dans la liste, un rappel (`callback`) est appelé
+avec son identifiant et éventuellement son nom. Cette classe est utile pour intégrer
+la sélection de patients dans d'autres interfaces.
+    """
     def __init__(self, callback):
+        """
+    Initialise la boîte de dialogue et affiche la liste des patients.
+
+    Args:
+        callback (function): Fonction à appeler lorsqu’un patient est sélectionné.
+                             Elle peut accepter soit un argument (id), soit deux (id, nom).
+        """
         super().__init__()
         self.setWindowTitle("Choisir un patient")
         self.setGeometry(200, 200, 400, 400)
@@ -30,6 +44,15 @@ class SelectionPatientDialog(QDialog):
         self.setLayout(self.layout)
 
     def patient_selectionne(self, item):
+        """
+    Appelée lorsqu’un patient est cliqué dans la liste.
+
+    Elle récupère l'ID et le nom du patient sélectionné, puis appelle la fonction
+    `callback` fournie, avec le bon nombre d’arguments selon ce qu’elle accepte.
+
+    Args:
+        item (QListWidgetItem): Élément cliqué représentant un patient.
+        """
         index = self.liste_widget.row(item)
         patient_id = self.patients[index][0]
         patient_name = self.patients[index][1]
@@ -43,4 +66,3 @@ class SelectionPatientDialog(QDialog):
             self.callback(patient_id, patient_name)
     
         self.close()
-
