@@ -39,7 +39,7 @@ class ListePatients(QDialog):
                 break
     
         if patient_id is not None:
-            self.details_fenetre = PatientDetailsWindow(patient_id, patient_name)
+            self.details_fenetre = PatientDetailsWindow()
             self.details_fenetre.exec()
             
     def supprimer_patient(self, item):
