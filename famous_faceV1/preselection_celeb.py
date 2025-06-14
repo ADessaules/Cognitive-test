@@ -9,7 +9,22 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from constant import DB_FILE, DOSSIER_PATIENTS, DOSSIER_IMAGES
 
 class SelectionCelebrites(QDialog):
+    """
+    Fenêtre de sélection des célébrités connues par le patient.
+
+    Elle permet à l’expérimentateur (ou au patient assisté) de parcourir
+    toutes les images des célébrités disponibles (ceux marquées avec _0),
+    de sélectionner celles reconnues, puis de sauvegarder la sélection
+    dans la base de données et dans un fichier `selection.txt` local.
+    """
     def __init__(self, patient_id, patient_name):
+        """
+    Initialise l’interface de sélection pour un patient donné.
+
+    Args:
+        patient_id (int): ID unique du patient dans la base de données.
+        patient_name (str): Nom du patient (utilisé pour le dossier).
+        """
         super().__init__()
         self.setWindowTitle("Sélection des célébrités")
         self.setGeometry(100, 100, 800, 600)
@@ -50,6 +65,12 @@ class SelectionCelebrites(QDialog):
         self.afficher_celebrite_grid()
 
     def afficher_celebrite_grid(self):
+        """
+    Affiche toutes les célébrités disponibles (seules les images finissant par _0)
+    dans une grille scrollable.
+
+    Chaque image est cliquable et peut être sélectionnée ou désélectionnée.
+        """
         row = col = 0
         for celebrité in self.celebrites:
             nom = celebrité["nom"]
@@ -73,6 +94,20 @@ class SelectionCelebrites(QDialog):
                 row += 1
 
     def generer_toggle_handler(self, label, nom, image_path):
+        """
+    Génère un gestionnaire de clic pour une image.
+
+    Permet d'activer/désactiver la sélection de la célébrité et modifie l’apparence
+    (transparence) en conséquence.
+
+    Args:
+        label (QLabel): Widget contenant l'image.
+        nom (str): Nom de la célébrité.
+        image_path (str): Chemin de l'image.
+
+    Returns:
+        handler (Callable): Fonction à exécuter lors du clic.
+        """
         def handler(event):
             current = self.selections[label]
             current["selected"] = not current["selected"]
@@ -90,6 +125,10 @@ class SelectionCelebrites(QDialog):
         return handler
 
     def enregistrer_selection_txt(self):
+        """
+    Sauvegarde les images sélectionnées dans un fichier texte `selection.txt`
+    dans le dossier du patient (au format : nom_image_0, nom_image_0...).
+        """
         selected_images = [os.path.splitext(os.path.basename(info["image"]))[0]
                            for info in self.selections.values() if info["selected"]]
         patient_folder = os.path.join("Patients", self.patient_name)
@@ -98,6 +137,12 @@ class SelectionCelebrites(QDialog):
             f.write(",".join(selected_images))
 
     def valider_selection(self):
+        """
+    Enregistre la sélection des célébrités dans la base de données,
+    puis appelle `enregistrer_selection_txt` pour la sauvegarde locale.
+
+    Ferme la fenêtre après confirmation.
+        """
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
         cursor.execute("DELETE FROM selections WHERE patient_id = ?", (self.patient_id,))
@@ -114,6 +159,12 @@ class SelectionCelebrites(QDialog):
         self.close()
 
     def stop_test(self):
+        """
+    Permet d’interrompre la présélection sans poursuivre le test.
+
+    Enregistre tout de même les sélections en base et en fichier texte,
+    puis ferme la fenêtre.
+        """
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
         cursor.execute("DELETE FROM selections WHERE patient_id = ?", (self.patient_id,))
