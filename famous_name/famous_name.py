@@ -13,6 +13,12 @@ from PyQt6.QtCore import QTimer, Qt, QEvent
 import pandas as pd
 
 class WaitingScreen(QWidget):
+    """
+Fenêtre d'attente affichée au patient avant le début du test.
+
+Affiche un message invitant à appuyer sur la barre espace
+pour démarrer l’épreuve.
+    """
     def __init__(self):
         super().__init__()
         self.setWindowTitle("\u00c9cran d'attente")
@@ -24,12 +30,26 @@ class WaitingScreen(QWidget):
         self.setLayout(layout)
 
 class PatientWindow(QWidget):
+    """
+Fenêtre affichée sur l'écran secondaire (côté patient).
+
+Elle affiche des boutons avec des noms de célébrités pendant les essais.
+Les noms sont disposés horizontalement et sont interactifs.
+    """
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Test en cours - \u00c9cran patient")
+        self.setWindowTitle("Test en cours - Écran patient")
         self.setGeometry(920, 100, 800, 600)
+
         self.name_layout = QHBoxLayout()
-        self.setLayout(self.name_layout)
+        self.name_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.name_layout.setSpacing(50)
+
+        self.outer_layout = QVBoxLayout()
+        self.outer_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.outer_layout.addLayout(self.name_layout)
+
+        self.setLayout(self.outer_layout)
 
     def show_names(self, triplet, click_handlers):
         for i in reversed(range(self.name_layout.count())):
@@ -37,15 +57,33 @@ class PatientWindow(QWidget):
             if widget:
                 widget.setParent(None)
 
+        screen = QApplication.primaryScreen().geometry()
+        btn_width = screen.width() // 4
+        btn_height = screen.height() // 4.5
+
         for name, handler in zip(triplet, click_handlers):
             button = QPushButton(name)
-            button.setFixedSize(350, 200)
-            button.setStyleSheet("font-size: 20px;")
+            button.setFixedSize(int(btn_width), int(btn_height))
+            button.setStyleSheet("font-size: 28px;")
             button.clicked.connect(handler)
             self.name_layout.addWidget(button)
 
 class FamousNameTest(QMainWindow):
+    """
+Fenêtre principale du test de reconnaissance de noms célèbres (pour l’expérimentateur).
+
+Fonctionnalités principales :
+- charger les triplets de noms ;
+- gérer la configuration du test ;
+- afficher les noms à l'écran patient ;
+- gérer les clics, les temps de réponse et les sauvegardes.
+    """
     def __init__(self):
+        """
+Initialise la fenêtre, charge les noms depuis un fichier `nom.txt`,
+configure les écrans, les patients et les widgets.
+Gère le mode double écran si disponible.
+        """
         super().__init__()
         self.setWindowTitle("Famous Name Test - Exp\u00e9rimentateur")
         self.setGeometry(100, 100, 1200, 600)
@@ -100,6 +138,11 @@ class FamousNameTest(QMainWindow):
         self.installEventFilter(self)
 
     def init_test_state(self):
+        """
+Réinitialise toutes les variables liées à une session de test.
+
+Appelée à chaque démarrage ou redémarrage d’un test.
+        """
         self.current_index = 0
         self.click_times = []
         self.trial_results = []
@@ -115,12 +158,40 @@ class FamousNameTest(QMainWindow):
         self.experimenter_labels = []
 
     def eventFilter(self, obj, event):
+        """
+Capture les clics souris pendant une session active,
+et enregistre les événements de stimulation (aucun choix).
+
+Permet aussi un suivi du temps même si le patient ne clique pas.
+        """
         if event.type() == QEvent.Type.MouseButtonPress and self.session_active:
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            self.nurse_clicks.append({"evenement": "clic_infirmiere", "horodatage": now})
+            elapsed = round(time.time() - self.session_start_time, 3) if self.session_start_time else ""
+
+            self.trial_results.append({
+                "id_essai": self.current_index + 1,
+                "temps_total_depuis_debut": elapsed,
+                "nom_choisi": "",
+                "correct": "",
+                "temps_reponse": "",
+                "horodatage_stimulation": now,
+                "participant": self.participant_name,
+                "mode": "stimulation",
+                "contact_stimulation": self.stim_contact,
+                "intensité": self.stim_intensite,
+                "durée": self.stim_duree
+            })
+
         return super().eventFilter(obj, event)
 
     def init_ui(self):
+        """
+Construit l’interface utilisateur (interface expérimentateur) :
+- champs de saisie pour les paramètres de stimulation,
+- choix du mode (clic, timer, espace),
+- boutons de démarrage et d’arrêt,
+- zone miroir des noms affichés pour l’expérimentateur.
+        """
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.main_layout = QHBoxLayout()
@@ -170,6 +241,9 @@ class FamousNameTest(QMainWindow):
         self.central_widget.setLayout(self.main_layout)
 
     def return_to_main_interface(self):
+        """
+Ferme la fenêtre actuelle et relance l’interface principale (`interface.py`).
+        """
         try:
             self.patient_window.close()
             self.close()
@@ -178,6 +252,11 @@ class FamousNameTest(QMainWindow):
             QMessageBox.critical(self, "Erreur", f"Impossible de retourner à l'interface principale : {e}")
 
     def prepare_test(self):
+        """
+Vérifie les champs obligatoires (stimulation, mode, patient), initialise la session.
+
+Charge les triplets de noms, prépare les timers, configure l’écran d’attente.
+        """
         contact = self.contact_input.text().strip()
         intensite = self.intensite_input.text().strip()
         duree = self.duree_input.text().strip()
@@ -217,6 +296,11 @@ class FamousNameTest(QMainWindow):
         self.patient_window.show()
 
     def keyReleaseEvent(self, event):
+        """
+Capture l'appui sur la barre espace :
+- démarre la session si elle ne l’est pas encore,
+- passe à l’essai suivant en mode "barre espace".
+        """
         if event.key() == Qt.Key.Key_Space:
             if not self.session_active and self.waiting_screen.isVisible():
                 self.waiting_screen.hide()
@@ -243,6 +327,12 @@ class FamousNameTest(QMainWindow):
                 self.show_triplet()
 
     def show_triplet(self):
+        """
+Affiche un triplet de noms sur l’interface patient et celle de l’expérimentateur.
+
+Les noms sont mélangés. Le nom célèbre (premier du triplet) est comparé
+aux clics pour déterminer si la réponse est correcte.
+        """
         for layout in (self.name_layout, self.patient_window.name_layout):
             for i in reversed(range(layout.count())):
                 widget = layout.itemAt(i).widget()
@@ -280,6 +370,10 @@ class FamousNameTest(QMainWindow):
             self.timer.start(self.timer_duration * 1000)
 
     def handle_click(self, is_famous, index, names):
+        """
+Enregistre le clic du patient, calcule le temps de réponse,
+évalue la correction et affiche un retour visuel (bordure verte ou rouge).
+        """
         if not self.session_active:
             return
 
@@ -299,7 +393,9 @@ class FamousNameTest(QMainWindow):
             "horodatage_stimulation": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "participant": self.participant_name,
             "mode": self.mode,
-            "contact_stimulation": self.stim_contact
+            "contact_stimulation": self.stim_contact,
+            "intensité": self.stim_intensite,
+            "durée": self.stim_duree
         })
 
         for i, label in enumerate(self.experimenter_labels):
@@ -311,6 +407,11 @@ class FamousNameTest(QMainWindow):
         QTimer.singleShot(500, self.show_triplet)
 
     def handle_timeout(self):
+        """
+Gère les essais où aucun choix n’est fait dans le temps imparti.
+
+Enregistre une réponse incorrecte et passe à l’essai suivant.
+        """
         if not self.session_active:
             return
     
@@ -325,6 +426,11 @@ class FamousNameTest(QMainWindow):
         QTimer.singleShot(100, self.show_triplet)
 
     def record_result(self, index, is_famous):
+        """
+Ajoute un essai dans les résultats, qu’il y ait eu réponse ou non.
+
+Utilisé dans `handle_timeout` et dans les essais espace non cliqués.
+        """
         now = time.time()
         reaction_time = round(now - self.start_time, 3)
         elapsed = round(now - self.session_start_time, 3)
@@ -340,10 +446,19 @@ class FamousNameTest(QMainWindow):
             "horodatage_stimulation": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "participant": self.participant_name,
             "mode": self.mode,
-            "contact_stimulation": self.stim_contact
+            "contact_stimulation": self.stim_contact,
+            "intensité": self.stim_intensite,
+            "durée": self.stim_duree
         })
 
     def end_session(self):
+        """
+Termine la session de test :
+- arrête le timer,
+- cache la fenêtre patient,
+- regroupe toutes les données en un fichier Excel,
+- sauvegarde les résultats dans le dossier du patient.
+        """
         if not self.session_active:
             return
 
@@ -376,6 +491,12 @@ class FamousNameTest(QMainWindow):
             QMessageBox.critical(self, "Erreur", "Le fichier est ouvert ailleurs. Fermez-le puis réessayez.")
 
 if __name__ == "__main__":
+    """
+Point d’entrée du programme.
+
+Instancie et affiche la fenêtre principale `FamousNameTest`.
+Démarre l’application Qt.
+    """
     app = QApplication(sys.argv)
     window = FamousNameTest()
     window.show()
