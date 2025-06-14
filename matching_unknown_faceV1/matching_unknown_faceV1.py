@@ -12,6 +12,12 @@ import subprocess
 
 
 class WaitingScreen(QWidget):
+    """
+Fenêtre affichée au patient avant le démarrage du test.
+
+Elle présente un simple message : "Appuyez sur Espace pour démarrer le test".
+Utilisée pour introduire un délai volontaire avant la session.
+    """
     def __init__(self):
         super().__init__()
         self.setWindowTitle("\u00c9cran d'attente")
@@ -24,25 +30,43 @@ class WaitingScreen(QWidget):
 
 
 class PatientWindow(QWidget):
+    """
+Fenêtre qui s’affiche sur l'écran du patient pendant le test.
+
+Elle montre :
+- une image en haut (le visage cible) ;
+- deux images en bas (choix possibles à cliquer pour identifier le bon visage).
+    """
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Test en cours - \u00c9cran patient")
+        self.setWindowTitle("Test en cours - Écran patient")
         self.setGeometry(920, 100, 800, 600)
+
         self.top_label = QLabel()
         self.top_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
+        #Layout horizontal pour les deux images du bas
         self.bottom_layout = QHBoxLayout()
         self.bottom_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.bottom_layout.setSpacing(50)  # espacement égal
 
-        layout = QVBoxLayout()
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.top_label)
-        layout.addLayout(self.bottom_layout)
-        self.setLayout(layout)
+        #Layout global qui centre tout
+        outer_layout = QVBoxLayout()
+        outer_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        outer_layout.addWidget(self.top_label)
+        outer_layout.addLayout(self.bottom_layout)
+
+        self.setLayout(outer_layout)
 
     def show_triplet(self, top_image_path, bottom_images, handlers):
+        screen = QApplication.primaryScreen().geometry()
+        img_w = screen.width() // 4
+        img_h = screen.height() // 2.5  # un peu plus petit que la moitié
+
         pixmap_top = QPixmap(top_image_path).scaled(
-            250, 250, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+            int(img_w), int(img_h),
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation
         )
         self.top_label.setPixmap(pixmap_top)
 
@@ -54,15 +78,33 @@ class PatientWindow(QWidget):
         for path, handler in zip(bottom_images, handlers):
             label = QLabel()
             pixmap = QPixmap(path).scaled(
-                250, 250, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+                int(img_w), int(img_h),
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
             )
             label.setPixmap(pixmap)
             label.mousePressEvent = handler
             self.bottom_layout.addWidget(label)
-
+            
 
 class MatchingUnknownTest(QMainWindow):
+    """
+Fenêtre principale du test Matching Unknown, utilisée par l’expérimentateur.
+
+Ce test consiste à présenter un visage inconnu en haut, et deux visages en bas :
+l’un correspond à ce visage vu précédemment, l’autre est un distracteur.
+
+Cette interface permet :
+- de préparer le test (sélection patient, paramètres) ;
+- de présenter les essais ;
+- d'enregistrer les clics et les temps de réponse ;
+- de sauvegarder les résultats dans un fichier Excel.
+    """
     def __init__(self):
+        """
+Initialise la fenêtre principale, charge les données, configure les composants,
+prépare les événements clavier et timer.
+        """
         super().__init__()
         self.setWindowTitle("Matching Unknown Test - Exp\u00e9rimentateur")
         self.setGeometry(100, 100, 1200, 600)
@@ -73,12 +115,20 @@ class MatchingUnknownTest(QMainWindow):
         self.timer.timeout.connect(self.advance_by_timer)
         self.patient_window = None
         self.waiting_screen = None
+        self.session_active = False
 
         self.init_data()
         self.init_ui()
         self.installEventFilter(self)
 
     def init_data(self):
+        """
+Parcourt le dossier d’images pour construire les triplets valides (0, 1, 2).
+
+Les fichiers sont regroupés par préfixe commun, puis organisés en triplets
+(top + deux images de comparaison). Un mapping est aussi préparé
+pour retrouver les noms correspondants aux triplets.
+        """
         self.triplets = {}
         for file in os.listdir(self.image_folder):
             if file.lower().endswith(('.jpg', '.jpeg', '.png')):
@@ -94,14 +144,28 @@ class MatchingUnknownTest(QMainWindow):
             if all(k in files_dict for k in ["0", "1", "2"]):
                 triplet = [files_dict["0"], files_dict["1"], files_dict["2"]]
                 self.all_triplets.append(triplet)
-                print(f"\u2714 Triplet valid\u00e9 : {triplet}")
             else:
                 print(f"\u274c Triplet invalide ignor\u00e9 pour le pr\u00e9fixe {prefix} : {files}")
 
         self.session_results = []
         self.nurse_clicks = []
+        self.triplet_info_map = {
+            f"image_{i+1}_": {"nom": name, "num": i+1} for i, name in enumerate([
+                "Dale Oen", "Michela Quattrociocche", "Henrik Sass Larsen", "Gavin Rossdale", "Sylvi Listhaug",
+                "Laimdota Straujuma", "Evan Spiegel", "Harald Kruger", "Simon Hughes", "Lara Stone",
+                "Dieter Bohlen", "Nicolaj Koppel", "Adam Senn", "Lars Ohly", "Bill Shorten",
+                "Bob Simon", "Katie Couric", "Brian Urlacher", "Jan Kees De Jager", "Maxi Iglesias",
+                "Sean O'pry", "Philippos Of Greece"
+            ])
+        }
 
     def init_ui(self):
+        """
+Construit l’interface graphique de l’expérimentateur :
+- panneau de gauche : configuration du test (paramètres, sélection) ;
+- panneau de droite : aperçu visuel des images affichées ;
+- connecte tous les boutons et champs à leurs fonctions.
+        """
         central = QWidget()
         self.setCentralWidget(central)
         layout = QHBoxLayout()
@@ -152,6 +216,12 @@ class MatchingUnknownTest(QMainWindow):
         central.setLayout(layout)
 
     def prepare_test(self):
+        """
+Vérifie que les champs sont bien remplis et prépare une nouvelle session.
+
+Mélange les triplets, réinitialise les données de session, puis affiche
+les fenêtres "attente" et "patient". Met le focus clavier sur la fenêtre.
+        """
         if self.patient_selector.currentText() == "-- Aucun --" or not all([
             self.contact_input.text().strip(),
             self.intensite_input.text().strip(),
@@ -184,12 +254,32 @@ class MatchingUnknownTest(QMainWindow):
         self.setFocus()
 
     def eventFilter(self, obj, event):
+        """
+Gère deux cas :
+1. Enregistrement d’un clic pour la stimulation (hors essai de réponse) ;
+2. Détection de la barre espace pour commencer ou passer au suivant.
+
+C’est ici que sont capturées les interactions "globales" de l’utilisateur.
+        """
         if event.type() == QEvent.Type.MouseButtonPress and self.session_active:
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            self.nurse_clicks.append({
-                "evenement": "clic_infirmiere",
+            elapsed = round(time.time() - self.start_time, 3) if hasattr(self, "start_time") else ""
+            
+            self.session_results.append({
+                "id_essai": self.index + 1,
+                "temps_reponse": elapsed,
+                "image_choisie": "",
+                "correct": "",
+                "triplet_nom": self.triplet_info_map.get(self.shuffled_triplets[self.index][0].rsplit("_", 1)[0] + "_", {}).get("nom", "Inconnu"),
+                "triplet_num": self.triplet_info_map.get(self.shuffled_triplets[self.index][0].rsplit("_", 1)[0] + "_", {}).get("num", -1),
+                "participant": self.patient_selector.currentText(),
+                "contact_stimulation": self.contact,
+                "intensité": self.intensite,
+                "durée": self.duree,
+                "mode": "stimulation",
                 "horodatage": now
             })
+
         if event.type() == QEvent.Type.KeyRelease and event.key() == Qt.Key.Key_Space:
             if not self.session_active and self.waiting_screen and self.waiting_screen.isVisible():
                 self.waiting_screen.hide()
@@ -198,13 +288,14 @@ class MatchingUnknownTest(QMainWindow):
             elif self.session_active and self.mode == "Barre espace":
                 now = time.time()
                 reaction_time = round(now - self.start_time, 3)
-            
+
                 self.session_results.append({
                     "id_essai": self.index + 1,
                     "temps_reponse": reaction_time,
                     "image_choisie": "aucune",
                     "correct": False,
-                    "triplet_nom": self.shuffled_triplets[self.index][0].split("_")[1],
+                    "triplet_nom": self.triplet_info_map.get(self.shuffled_triplets[self.index][0].rsplit("_", 1)[0] + "_", {}).get("nom", "Inconnu"),
+                    "triplet_num": self.triplet_info_map.get(self.shuffled_triplets[self.index][0].rsplit("_", 1)[0] + "_", {}).get("num", -1),
                     "participant": self.patient_selector.currentText(),
                     "contact_stimulation": self.contact,
                     "intensité": self.intensite,
@@ -212,19 +303,26 @@ class MatchingUnknownTest(QMainWindow):
                     "mode": self.mode,
                     "horodatage": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 })
-            
+
                 self.index += 1
                 self.show_next_triplet()
+
         return super().eventFilter(obj, event)
 
     def advance_by_timer(self):
+        """
+Appelée lorsque le temps imparti est écoulé sans clic utilisateur.
+
+Enregistre une réponse vide (non cliquée) et passe au triplet suivant.
+        """
         # Enregistre une non-réponse
         self.session_results.append({
             "id_essai": self.index + 1,
             "temps_reponse": self.timer_duration,
             "image_choisie": "aucune",
             "correct": False,
-            "triplet_nom": self.shuffled_triplets[self.index][0].split("_")[1],
+            "triplet_nom": self.triplet_info_map.get(self.shuffled_triplets[self.index][0].rsplit("_", 1)[0] + "_", {}).get("nom", "Inconnu"),
+            "triplet_num": self.triplet_info_map.get(self.shuffled_triplets[self.index][0].rsplit("_", 1)[0] + "_", {}).get("num", -1),
             "participant": self.patient_selector.currentText(),
             "contact_stimulation": self.contact,
             "intensité": self.intensite,
@@ -237,6 +335,14 @@ class MatchingUnknownTest(QMainWindow):
         self.show_next_triplet()
 
     def show_next_triplet(self):
+        """
+Affiche le prochain triplet :
+- 1 image cible (top)
+- 2 images réponses (dont une correcte), dans un ordre aléatoire
+
+Crée les gestionnaires de clics pour chaque image réponse.
+Affiche en parallèle les images sur l’interface expérimentateur.
+        """
         for i in reversed(range(self.image_layout.count())):
             w = self.image_layout.itemAt(i).widget()
             if w:
@@ -256,6 +362,11 @@ class MatchingUnknownTest(QMainWindow):
         self.start_time = time.time()
 
         def make_handler(selected_img):
+            """
+Fonction imbriquée (factory) utilisée dans `show_next_triplet` pour
+générer des handlers qui enregistrent le choix utilisateur et
+affichent un retour visuel (bordure verte ou rouge).
+            """
             def handler(event):
                 rt = round(time.time() - self.start_time, 3)
                 self.session_results.append({
@@ -263,7 +374,8 @@ class MatchingUnknownTest(QMainWindow):
                     "temps_reponse": rt,
                     "image_choisie": "correct" if is_correct_map[selected_img] else "distracteur",
                     "correct": is_correct_map[selected_img],
-                    "triplet_nom": top.split("_")[1],
+                    "triplet_nom": self.triplet_info_map.get(self.shuffled_triplets[self.index][0].rsplit("_", 1)[0] + "_", {}).get("nom", "Inconnu"),
+                    "triplet_num": self.triplet_info_map.get(self.shuffled_triplets[self.index][0].rsplit("_", 1)[0] + "_", {}).get("num", -1),
                     "participant": self.patient_selector.currentText(),
                     "contact_stimulation": self.contact,
                     "intensit\u00e9": self.intensite,
@@ -299,6 +411,12 @@ class MatchingUnknownTest(QMainWindow):
             self.timer.start(self.timer_duration * 1000)
 
     def save_results(self):
+        """
+À la fin du test ou sur demande :
+- regroupe les résultats en un DataFrame ;
+- les sauvegarde dans un fichier Excel nommé avec le patient et la date ;
+- ferme les fenêtres et stoppe le timer.
+        """
         df_trials = pd.DataFrame(self.session_results)
         df_clicks = pd.DataFrame(self.nurse_clicks)
         df = pd.concat([df_trials, df_clicks], ignore_index=True)
@@ -329,6 +447,11 @@ class MatchingUnknownTest(QMainWindow):
         self.session_active = False
 
     def return_to_main_interface(self):
+        """
+Ferme toutes les fenêtres liées au test et relance l’interface principale.
+
+Utilisé pour revenir au menu principal après ou pendant un test.
+        """
         try:
             if self.patient_window:
                 self.patient_window.close()
@@ -341,8 +464,12 @@ class MatchingUnknownTest(QMainWindow):
 
 
 if __name__ == "__main__":
+    """
+Point d’entrée principal du script.
+
+Crée l’application Qt et affiche la fenêtre principale du test Matching Unknown.
+    """
     app = QApplication(sys.argv)
     window = MatchingUnknownTest()
     window.show()
     sys.exit(app.exec())
-
