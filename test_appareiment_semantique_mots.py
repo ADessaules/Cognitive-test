@@ -1,6 +1,7 @@
 import sys
 import random
 import time
+import subprocess
 from datetime import datetime
 import pandas as pd
 from pathlib import Path
@@ -9,6 +10,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QVBoxLayout, QMessageBox, QHBoxLayout
 )
 from PyQt6.QtCore import Qt, QTimer, QEvent
+from preselection_mots_semantique import SelectionMots  
 
 # === Triplets de test ===
 tests = [
@@ -146,6 +148,7 @@ class SemanticMatchingExaminateur(QMainWindow):
         self.test_name = "matching_words"
         self.timer = QTimer()
         self.timer.timeout.connect(self.advance_by_timer)
+        self.session_active = False
 
         self.init_ui()
         self.installEventFilter(self)
@@ -156,8 +159,11 @@ class SemanticMatchingExaminateur(QMainWindow):
         layout = QHBoxLayout()
         left_layout = QVBoxLayout()
 
+        btn_preselection = QPushButton("Aller à la présélection")
+        btn_preselection.clicked.connect(self.launch_preselection)
         btn_retour = QPushButton("Retour à l'interface")
         btn_retour.clicked.connect(self.retour_interface)
+        left_layout.addWidget(btn_preselection)
         left_layout.addWidget(btn_retour)
 
         self.patient_selector = QComboBox()
@@ -202,6 +208,34 @@ class SemanticMatchingExaminateur(QMainWindow):
         layout.addLayout(self.right_layout)
         central.setLayout(layout)
 
+    def launch_preselection(self):
+        try:
+            subprocess.Popen(["python", "./preselection_mots_semantique.py"])
+            print("Exécution du fichier")
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Impossible d'ouvrir l'interface de présélection : {e}")
+
+
+    def init_test_state(self):
+        self.current_index = 0
+        self.click_times = []
+        self.error_indices = []
+        self.trial_results = []
+        self.nurse_clicks = []
+        self.session_start_time = None
+        self.start_time = None
+        self.session_active = False
+        self.name = ""
+        self.mode = "click"
+        self.timer_duration = 3
+        self.space_mode = False
+        self.selected_index = None
+        self.experimenter_labels = []
+        self.stimulus_active = False
+        self.stimulus_start_time = None
+        self.stimulus_end_time = None   
+
+
     def retour_interface(self):
         try:
             import subprocess
@@ -239,6 +273,35 @@ class SemanticMatchingExaminateur(QMainWindow):
 
         self.waiting_screen = WaitingScreen()
         self.patient_window = SemanticMatchingPatient(self.test_triplets)
+
+        # 🆕 Gestion multi-écrans
+        screens = QApplication.screens()
+        if len(screens) >= 2:
+            primary_screen = screens[0]
+            secondary_screen = screens[1]
+        
+            # Interface expérimentateur sur écran principal
+            self.move(primary_screen.geometry().topLeft())
+            self.showFullScreen()
+        
+            # Interface patient sur écran secondaire
+            self.patient_window.move(secondary_screen.geometry().topLeft())
+            self.patient_window.showFullScreen()
+        else:
+            print("⚠️ Moins de deux écrans détectés. Affichage en mode fenêtré.")
+            self.setGeometry(100, 100, 1200, 600)
+            self.patient_window.setGeometry(920, 100, 800, 600)
+            self.show()
+            self.patient_window.show()
+
+        self.init_test_state()
+        self.participant_name = self.patient_selector.currentText()
+        self.stim_contact = self.contact
+        self.stim_intensite = self.intensite
+        self.stim_duree = self.duree
+        mode_text = self.mode_selector.currentText()
+        self.mode = "timer" if mode_text == "Temps imparti" else "click" if mode_text == "Image au clic" else "space"
+        self.space_mode = self.mode == "space"
     
         self.waiting_screen.show()
         self.patient_window.show()
@@ -260,7 +323,37 @@ class SemanticMatchingExaminateur(QMainWindow):
                 elif self.session_active and self.mode == "Barre espace":
                     self.index += 1
                     self.show_next_triplet()
+
+        if event.type() == QEvent.Type.KeyRelease:
+            print("Touche relâchée :", event.key())
+
+            if event.key() == Qt.Key.Key_S:
+                print("✅ Touche S détectée")
+                self.lancer_stimulus()
+                return True
+            elif event.key() == Qt.Key.Key_Space:
+                print("Espace détecté")
+
         return super().eventFilter(obj, event)
+
+    
+    def lancer_stimulus(self):
+        try:
+            duree_ms = int(float(self.duree))
+        except ValueError :
+            QMessageBox.warning(self, "Erreur", "Durée de stimulation invalide.")
+            return
+        
+        self.stimulus_active = True
+        self.stimulus_start_time = time.time()
+        self.stimulus_end_time = self.stimulus_start_time + (duree_ms/1000)
+
+        QTimer.singleShot(duree_ms, self.fin_stimulus)
+    
+    def fin_stimulus(self):
+        self.stimulus_active = False
+        self.stimulus_start_time = None
+        self.stimulus_end_time = None
 
     def advance_by_timer(self):
         self.index += 1
@@ -294,20 +387,25 @@ class SemanticMatchingExaminateur(QMainWindow):
         def make_handler(selected_option, selected_button):
             def handler():
                 rt = round(time.time() - self.start_time, 3)
-                self.session_results.append({
-                    "id_essai": self.index + 1,
-                    "temps_reponse": rt,
-                    "choix": selected_option,
-                    "correct": is_correct_map[selected_option],
-                    "mot_test": test_word,
-                    "participant": self.patient_selector.currentText(),
-                    "contact_stimulation": self.contact,
-                    "intensit\u00e9": self.intensite,
-                    "dur\u00e9e": self.duree,
-                    "mode": self.mode,
-                    "horodatage": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "test_name": self.test_name
-                })
+                now = time.time()
+                now_datetime = datetime.now()
+                elapsed_since_start = now - self.start_time if self.start_time else None # Temps écoulé depuis le début du test
+                entry = {
+                    "Essai": self.index + 1,
+                    "Date": now_datetime.strftime("%Y-%m-%d"),
+                    "Heure": now_datetime.strftime("%H:%M:%S"),
+                    "Temps total (s)": round(elapsed_since_start, 2),
+                    "Temps de réponse (s)": rt,
+                    "Stimulation": "active" if self.stimulus_active else "",
+                    "Contact stimulation": self.contact,
+                    "Intensité (mA)": self.intensite,
+                    "Durée (ms)": self.duree,
+                    "Mot testé": test_word,
+                    "Choix": selected_option,
+                    "Correct": is_correct_map[selected_option]
+                }
+                self.session_results.append(entry)
+
                 for b in (btn1, btn2):
                     b.setEnabled(False)
                 selected_button.setStyleSheet(f"font-size: 20px; padding: 15px; border: 4px solid {'green' if is_correct_map[selected_option] else 'red'}")
@@ -335,9 +433,17 @@ class SemanticMatchingExaminateur(QMainWindow):
             return
 
         now = datetime.now().strftime("%Y_%m_%d_%H%M")
-        name = self.patient_selector.currentText().replace(" ", "_")
+        name = self.patient_selector.currentText()
+        print(self.patient_selector.currentText())
         filename = f"{name}_{now}_{self.contact}-{self.intensite}-{self.duree}_{self.test_name}.xlsx"
-        df.to_excel(filename, index=False)
+
+        patients_root = Path(__file__).resolve().parent / "Patients"
+        patient_dir = patients_root / self.participant_name
+        patient_dir.mkdir(parents=True, exist_ok=True)  # Crée si manquant
+    
+        output_path = patient_dir / filename
+
+        df.to_excel(output_path, index=False)
         QMessageBox.information(self, "Fin", f"Test terminé. Résultats enregistrés dans :\n{filename}")
         self.status_label.setText("Test terminé.")
         if self.patient_window:
