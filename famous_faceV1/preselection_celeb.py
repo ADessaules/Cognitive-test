@@ -15,7 +15,7 @@ class SelectionCelebrites(QDialog):
     Elle permet à l’expérimentateur (ou au patient assisté) de parcourir
     toutes les images des célébrités disponibles (ceux marquées avec _0),
     de sélectionner celles reconnues, puis de sauvegarder la sélection
-    dans la base de données et dans un fichier `selection.txt` local.
+    dans la base de données et dans un fichier selection.txt local.
     """
     def __init__(self, patient_id, patient_name):
         """
@@ -126,7 +126,7 @@ class SelectionCelebrites(QDialog):
 
     def enregistrer_selection_txt(self):
         """
-    Sauvegarde les images sélectionnées dans un fichier texte `selection.txt`
+    Sauvegarde les images sélectionnées dans un fichier texte selection.txt
     dans le dossier du patient (au format : nom_image_0, nom_image_0...).
         """
         selected_images = [os.path.splitext(os.path.basename(info["image"]))[0]
@@ -139,7 +139,7 @@ class SelectionCelebrites(QDialog):
     def valider_selection(self):
         """
     Enregistre la sélection des célébrités dans la base de données,
-    puis appelle `enregistrer_selection_txt` pour la sauvegarde locale.
+    puis appelle enregistrer_selection_txt pour la sauvegarde locale.
 
     Ferme la fenêtre après confirmation.
         """

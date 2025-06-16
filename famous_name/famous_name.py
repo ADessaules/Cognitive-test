@@ -164,23 +164,24 @@ et enregistre les événements de stimulation (aucun choix).
 
 Permet aussi un suivi du temps même si le patient ne clique pas.
         """
-        if event.type() == QEvent.Type.MouseButtonPress and self.session_active:
-            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            elapsed = round(time.time() - self.session_start_time, 3) if self.session_start_time else ""
+        if event.type() == QEvent.Type.MouseButtonPress:
+            if event.button() == Qt.MouseButton.RightButton and obj == self:
+                now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                elapsed = round(time.time() - self.session_start_time, 3) if self.session_start_time else ""
 
-            self.trial_results.append({
-                "id_essai": self.current_index + 1,
-                "temps_total_depuis_debut": elapsed,
-                "nom_choisi": "",
-                "correct": "",
-                "temps_reponse": "",
-                "horodatage_stimulation": now,
-                "participant": self.participant_name,
-                "mode": "stimulation",
-                "contact_stimulation": self.stim_contact,
-                "intensité": self.stim_intensite,
-                "durée": self.stim_duree
-            })
+                self.nurse_clicks.append({
+                    "id_essai": self.current_index + 1,
+                    "temps_total_depuis_debut": elapsed,
+                    "nom_choisi": "",
+                    "correct": "",
+                    "temps_reponse": "",
+                    "horodatage_stimulation": now,
+                    "participant": self.participant_name,
+                    "mode": "clic droit",
+                    "contact_stimulation": self.stim_contact,
+                    "intensité": self.stim_intensite,
+                    "durée": self.stim_duree
+                })
 
         return super().eventFilter(obj, event)
 
