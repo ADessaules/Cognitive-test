@@ -168,7 +168,7 @@ class SemanticMatchingExaminateur(QMainWindow):
 
         self.patient_selector = QComboBox()
         self.patient_selector.addItem("-- Aucun --")
-        patients_path = Path(__file__).resolve().parent / "Patients"
+        patients_path = Path(__file__).resolve().parent.parent / "Patients"
         if patients_path.exists():
             for folder in patients_path.iterdir():
                 if folder.is_dir():
@@ -210,7 +210,8 @@ class SemanticMatchingExaminateur(QMainWindow):
 
     def launch_preselection(self):
         try:
-            subprocess.Popen(["python", "./preselection_mots_semantique.py"])
+            script_path = Path(__file__).resolve().parent / "preselection_mots_semantique.py"
+            subprocess.Popen(["python", str(script_path)])
             print("Exécution du fichier")
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Impossible d'ouvrir l'interface de présélection : {e}")
@@ -437,7 +438,7 @@ class SemanticMatchingExaminateur(QMainWindow):
         print(self.patient_selector.currentText())
         filename = f"{name}_{now}_{self.contact}-{self.intensite}-{self.duree}_{self.test_name}.xlsx"
 
-        patients_root = Path(__file__).resolve().parent / "Patients"
+        patients_root = Path(__file__).resolve().parent.parent / "Patients"
         patient_dir = patients_root / self.participant_name
         patient_dir.mkdir(parents=True, exist_ok=True)  # Crée si manquant
     
