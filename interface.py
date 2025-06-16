@@ -109,13 +109,13 @@ class MainWindow(QMainWindow):
         elif test_name == "appareiment_semantique_mots":
             try:
                 self.hide()
-                subprocess.Popen(["python", "./test_appareiment_semantique_mots.py"])
+                subprocess.Popen(["python", "./test_appariement_semantique_mots/test_appareiment_semantique_mots.py"])
             except Exception as e:
                 print(f"Erreur lors du lancement du test : {e}")
         elif test_name == "appareiment_semantique_image":
             try:
                 self.hide()
-                subprocess.Popen(["python", "./test_appariement_semantique_image.py"])
+                subprocess.Popen(["python", "./test_appariement_semantique_image/test_appariement_semantique_image.py"])
             except Exception as e:
                 print(f"Erreur lors du lancement du test : {e}")
         elif test_name == "bisection_test":
