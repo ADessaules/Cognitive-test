@@ -9,6 +9,7 @@
 - Un test famous_face
 - Un test famous_name
 - Une interface de gestion de patients
+- Le test de bissection
 - Un système de lancement centralisé pour tous les modules de test
 
 L'application est pensée pour être utilisée dans un cadre de recherche ou de bilan cognitif (éducation, neuropsychologie, etc.).
@@ -61,17 +62,58 @@ Depuis cette interface, vous pouvez :
 
 ## Structure du projet
 
-```
-Cognitive-test/
-├── interface.py                          # Interface principale (menu centralisé)
-├── test_appareiment_semantique_mots.py  # Test sémantique basé sur des mots
-├── test_appariement_semantique_image.py # Test sémantique basé sur des images
-├── constant.py                           # Constantes générales
-├── famous_name.py                        # Utilisé dans certains tests ou affichages
-├── patients.db                           # Base de données SQLite
-├── nom.txt                               # Fichier de noms
-├── README.md                             # Ce fichier
-```
-
----
+📁 bisection_test
+│   └── 📁 __pycache__
+│   └── 📄 bisection_test.py
+│
+📁 build\interface
+│
+📁 database
+│   └── 📁 __pycache__
+│   └── 📄 database.py
+│   └── 📄 patients.db
+│
+📁 famous_faceV1
+│   └── 📁 __pycache__
+│   └── 📁 image_famous_faceV1
+│   └── 📁 image_preselection
+│   └── 📄 dialogs.py
+│   └── 📄 famous_faceV1.py
+│   └── 📄 main_window.py
+│   └── 📄 main.py
+│   └── 📄 preselection_celeb.py
+│
+📁 famous_name
+│   └── 📄 famous_name.py
+│   └── 📄 nom.txt
+│
+📁 gestion_patient
+│   └── 📁 __pycache__
+│   └── 📄 creation_patient.py
+│   └── 📄 detail_patient.py
+│   └── 📄 liste_patients.py
+│
+📁 matching_unknown_faceV1
+│   └── 📁 image_matching_unknown_faceV1
+│   └── 📄 matching_unknown_faceV1.py
+│
+📁 Patients
+│
+📁 test_appariement_semantique_image
+│   └── 📁 image_test_appariemment
+│   └── 📄 preselection_image_sémantique.py
+│   └── 📄 test_appariement_semantique_image.py
+│
+📁 test_appariement_semantique_mots
+│   └── 📁 __pycache__
+│   └── 📄 constant.py
+│   └── 📄 preselection_mots_semantique.py
+│   └── 📄 test_appariement_semantique_mots.py
+│
+📄 brain_icon.ico  
+📄 icon.png  
+📄 interface.exe  
+📄 interface.py  
+📄 interface.spec  
+📄 README.md
 
