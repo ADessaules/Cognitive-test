@@ -166,8 +166,7 @@ class ImageSemanticMatchingTest(QMainWindow):
         try:
             import subprocess
             import os
-            interface_path = os.path.join(os.path.dirname(__file__), "interface.py")
-            subprocess.Popen(["python", interface_path], shell=True)
+            subprocess.Popen(["python", "interface.py"])
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Impossible de lancer l'interface principale :\n{e}")
         finally:
