@@ -14,6 +14,8 @@
 
 L'application est pensée pour être utilisée dans un cadre de recherche ou de bilan cognitif (éducation, neuropsychologie, etc.).
 
+Il est indispensable de posséder deux écrans pour bien faire fonctionner l'application.
+
 ---
 
 ## Technologies utilisées
