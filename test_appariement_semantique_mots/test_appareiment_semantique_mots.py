@@ -342,7 +342,9 @@ class SemanticMatchingExaminateur(QMainWindow):
                 print("✅ Touche S détectée")
                 self.lancer_stimulus()
                 return True
-            elif event.button() == Qt.MouseButton.RightButton:
+            
+        if event.type() == QEvent.Type.MouseButtonPress:
+            if event.button() == Qt.MouseButton.RightButton:
                 print("Clique droit détectée")
                 self.lancer_stimulus()
                 return True

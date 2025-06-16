@@ -171,7 +171,7 @@ class ImageSemanticMatchingTest(QMainWindow):
                 widget.setParent(None)
             elif child_layout:
                 self.clear_layout(child_layout)
-                
+
     # Fonction pour retourner à l'interface principale aprés avoir cliquer sur "Retour à l'interface principale"
     def retour_interface(self):
         try:
@@ -263,7 +263,9 @@ class ImageSemanticMatchingTest(QMainWindow):
                 print("✅ Touche S détectée")
                 self.lancer_stimulus()
                 return True
-            elif event.button() == Qt.MouseButton.RightButton:
+            
+        if event.type() == QEvent.Type.MouseButtonPress:
+            if event.button() == Qt.MouseButton.RightButton:
                 print("Clique droit détectée")
                 self.lancer_stimulus()
                 return True
