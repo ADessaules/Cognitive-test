@@ -78,22 +78,6 @@ class SelectionMots(QDialog):
         with open(os.path.join(patient_folder, "selection_mots.txt"), "w", encoding="utf-8") as f:
             f.write(",".join(selected_mots))
 
-    def valider_selection(self):
-        conn = sqlite3.connect(DB_FILE)
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM selection_mots WHERE patient_id = ?", (self.patient_id,))
-        for info in self.selections.values():
-            if info["selected"]:
-                cursor.execute(
-                    "INSERT INTO selection_mots (patient_id, mot) VALUES (?, ?)",
-                    (self.patient_id, info["mot"])
-                )
-        conn.commit()
-        conn.close()
-        self.enregistrer_selection_txt()
-        QMessageBox.information(self, "Enregistré", "Sélection mise à jour avec succès.")
-        self.close()
-
     def table_selection_mots():
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
@@ -109,6 +93,22 @@ class SelectionMots(QDialog):
         conn.commit()
         conn.close()
         print("✅ Table 'selection_mots' vérifiée/créée avec succès.")
+
+    def valider_selection(self):
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM selection_mots WHERE patient_id = ?", (self.patient_id,))
+        for info in self.selections.values():
+            if info["selected"]:
+                cursor.execute(
+                    "INSERT INTO selection_mots (patient_id, mot) VALUES (?, ?)",
+                    (self.patient_id, info["mot"])
+                )
+        conn.commit()
+        conn.close()
+        self.enregistrer_selection_txt()
+        QMessageBox.information(self, "Enregistré", "Sélection mise à jour avec succès.")
+        self.close()
 
     def stop_test(self):
         self.valider_selection()
