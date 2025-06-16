@@ -231,28 +231,28 @@ sauvegarde des résultats.
 
     def eventFilter(self, obj, event):
         """
-        Intercepte les clics souris pendant une session active pour les enregistrer
-        comme événements de stimulation.
+        Intercepte uniquement les clics droits pendant une session active
+        pour enregistrer un événement de stimulation.
         """
         if event.type() == QEvent.Type.MouseButtonPress and self.session_active:
-            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            elapsed = round(time.time() - self.session_start_time, 3)
+            if event.button() == Qt.MouseButton.RightButton:
+                now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                elapsed = round(time.time() - self.session_start_time, 3)
 
-            # Ajout immédiat dans les résultats d'essais
-            self.trial_results.append({
-                "id_essai": self.current_index + 1,
-                "temps_total_depuis_debut": elapsed,
-                "image_choisie": "",
-                "correct": "",
-                "temps_reponse": "",
-                "horodatage_stimulation": now,
-                "triplet_nom": self.current_triplet_name,
-                "participant": self.participant_name,
-                "mode": "stimulation",  # <- Remplacement du clic_infirmiere
-                "contact_stimulation": self.stim_contact,
-                "intensite": self.stim_intensite,
-                "duree": self.stim_duree
-            })
+                self.trial_results.append({
+                    "id_essai": self.current_index + 1,
+                    "temps_total_depuis_debut": elapsed,
+                    "image_choisie": "",
+                    "correct": "",
+                    "temps_reponse": "",
+                    "horodatage_stimulation": now,
+                    "triplet_nom": self.current_triplet_name,
+                    "participant": self.participant_name,
+                    "mode": "stimulation",  # <- Remplacement du clic_infirmiere
+                    "contact_stimulation": self.stim_contact,
+                    "intensite": self.stim_intensite,
+                    "duree": self.stim_duree
+                })
         return super().eventFilter(obj, event)
 
     def toggle_timer_input(self):

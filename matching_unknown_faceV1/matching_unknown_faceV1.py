@@ -106,16 +106,39 @@ Initialise la fenêtre principale, charge les données, configure les composants
 prépare les événements clavier et timer.
         """
         super().__init__()
-        self.setWindowTitle("Matching Unknown Test - Exp\u00e9rimentateur")
+        self.setWindowTitle("Matching Unknown Test - Expérimentateur")
         self.setGeometry(100, 100, 1200, 600)
         self.image_folder = os.path.join(os.path.dirname(__file__), "image_matching_unknown_faceV1")
         self.output_folder = os.path.dirname(__file__)
         self.test_name = "matching_unknown"
         self.timer = QTimer()
         self.timer.timeout.connect(self.advance_by_timer)
-        self.patient_window = None
-        self.waiting_screen = None
         self.session_active = False
+
+        self.patient_window = PatientWindow()
+        self.waiting_screen = WaitingScreen()
+
+        # Gestion multi-écrans comme dans FamousNameTest
+        screens = QApplication.screens()
+        if len(screens) >= 2:
+            primary_screen = screens[0]
+            secondary_screen = screens[1]
+
+            # Expérimentateur en plein écran sur le principal
+            self.move(primary_screen.geometry().topLeft())
+            self.showFullScreen()
+
+            # Patient en plein écran sur l'écran secondaire
+            self.patient_window.move(secondary_screen.geometry().topLeft())
+            self.patient_window.showFullScreen()
+            self.secondary_screen = secondary_screen
+        else:
+            print("⚠️ Moins de deux écrans détectés. Utilisation en mode fenêté.")
+            self.setGeometry(100, 100, 1200, 600)
+            self.patient_window.setGeometry(920, 100, 800, 600)
+            self.show()
+            self.patient_window.show()
+            self.secondary_screen = None
 
         self.init_data()
         self.init_ui()
@@ -246,10 +269,19 @@ les fenêtres "attente" et "patient". Met le focus clavier sur la fenêtre.
         self.session_results = []
         self.session_active = False
 
-        self.patient_window = PatientWindow()
-        self.waiting_screen = WaitingScreen()
-        self.waiting_screen.show()
-        self.patient_window.show()
+        # Réaffiche les fenêtres au bon endroit en plein écran si possible
+        if self.secondary_screen:
+            self.patient_window.move(self.secondary_screen.geometry().topLeft())
+            self.patient_window.showFullScreen()
+            self.waiting_screen.move(self.secondary_screen.geometry().topLeft())
+            self.waiting_screen.setGeometry(150, 150, 800, 600)
+            self.waiting_screen.show()
+        else:
+            self.patient_window.setGeometry(920, 100, 800, 600)
+            self.waiting_screen.setGeometry(920, 100, 800, 600)
+            self.patient_window.show()
+            self.waiting_screen.show()
+
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setFocus()
 
@@ -261,24 +293,25 @@ Gère deux cas :
 
 C’est ici que sont capturées les interactions "globales" de l’utilisateur.
         """
-        if event.type() == QEvent.Type.MouseButtonPress and self.session_active:
-            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            elapsed = round(time.time() - self.start_time, 3) if hasattr(self, "start_time") else ""
-            
-            self.session_results.append({
-                "id_essai": self.index + 1,
-                "temps_reponse": elapsed,
-                "image_choisie": "",
-                "correct": "",
-                "triplet_nom": self.triplet_info_map.get(self.shuffled_triplets[self.index][0].rsplit("_", 1)[0] + "_", {}).get("nom", "Inconnu"),
-                "triplet_num": self.triplet_info_map.get(self.shuffled_triplets[self.index][0].rsplit("_", 1)[0] + "_", {}).get("num", -1),
-                "participant": self.patient_selector.currentText(),
-                "contact_stimulation": self.contact,
-                "intensité": self.intensite,
-                "durée": self.duree,
-                "mode": "stimulation",
-                "horodatage": now
-            })
+        if event.type() == QEvent.Type.MouseButtonPress:
+            # Seulement si clic droit ET dans la fenêtre de l'expérimentateur
+            if event.button() == Qt.MouseButton.RightButton and obj == self:
+                now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                elapsed = round(time.time() - self.start_time, 3) if hasattr(self, "start_time") else ""
+                self.nurse_clicks.append({
+                    "id_essai": self.index + 1,
+                    "temps_reponse": elapsed,
+                    "image_choisie": "",
+                    "correct": "",
+                    "triplet_nom": self.triplet_info_map.get(self.shuffled_triplets[self.index][0].rsplit("_", 1)[0] + "_", {}).get("nom", "Inconnu"),
+                    "triplet_num": self.triplet_info_map.get(self.shuffled_triplets[self.index][0].rsplit("_", 1)[0] + "_", {}).get("num", -1),
+                    "participant": self.patient_selector.currentText(),
+                    "contact_stimulation": self.contact,
+                    "intensité": self.intensite,
+                    "durée": self.duree,
+                    "mode": "clic droit",
+                    "horodatage": now
+                })
 
         if event.type() == QEvent.Type.KeyRelease and event.key() == Qt.Key.Key_Space:
             if not self.session_active and self.waiting_screen and self.waiting_screen.isVisible():
