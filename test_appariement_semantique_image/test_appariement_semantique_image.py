@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtCore import Qt, QTimer, QEvent
 
+# Classe de l'écran d'attente
 class WaitingScreen(QWidget):
     def __init__(self):
         super().__init__()
@@ -28,6 +29,7 @@ class WaitingScreen(QWidget):
         layout.addWidget(label)
         self.setLayout(layout)
 
+# Classe de l'écran du patient
 class PatientWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -41,6 +43,7 @@ class PatientWindow(QWidget):
         layout.addLayout(self.bottom_layout)
         self.setLayout(layout)
 
+    # Affiche les triplets au patient 
     def show_triplet(self, top_image_path, options, handlers):
         pixmap_top = QPixmap(top_image_path).scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio)
         self.top_label.setPixmap(pixmap_top)
@@ -58,6 +61,7 @@ class PatientWindow(QWidget):
             btn.clicked.connect(handler)
             self.bottom_layout.addWidget(btn)
 
+#Classe de l'écran de l'expérimentateur
 class ImageSemanticMatchingTest(QMainWindow):
     def __init__(self, test_triplets):
         super().__init__()
@@ -71,6 +75,7 @@ class ImageSemanticMatchingTest(QMainWindow):
         self.init_ui()
         self.installEventFilter(self)
 
+    # Initialise l'Interface de l'expérimentateur 
     def init_ui(self):
         central = QWidget()
         self.setCentralWidget(central)
@@ -84,6 +89,7 @@ class ImageSemanticMatchingTest(QMainWindow):
         left_layout.addWidget(btn_preselection)
         left_layout.addWidget(btn_retour)
 
+        # Connexion au patients disponible pour le test
         self.patient_selector = QComboBox()
         self.patient_selector.addItem("-- Aucun --")
         patients_path = Path(__file__).resolve().parent.parent / "Patients"
@@ -91,7 +97,8 @@ class ImageSemanticMatchingTest(QMainWindow):
             for folder in patients_path.iterdir():
                 if folder.is_dir():
                     self.patient_selector.addItem(folder.name)
-
+        
+        # Renseigné les paramètre 
         self.contact_input = QLineEdit()
         self.contact_input.setPlaceholderText("Contacts de stimulation")
         self.intensite_input = QLineEdit()
@@ -125,6 +132,7 @@ class ImageSemanticMatchingTest(QMainWindow):
         layout.addLayout(self.image_layout)
         central.setLayout(layout)
 
+    # Fonction pour lancer la préselection aprés avoir appuyer sur le bouton "Aller à la selection"
     def launch_preselection(self):
         try:
             script_path = Path(__file__).resolve().parent / "preselection_image_sémantique.py"
@@ -133,7 +141,7 @@ class ImageSemanticMatchingTest(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Impossible d'ouvrir l'interface de présélection : {e}")
 
-
+    # Initialise tout les paramètres 
     def init_test_state(self):
         self.current_index = 0
         self.click_times = []
@@ -153,7 +161,8 @@ class ImageSemanticMatchingTest(QMainWindow):
         self.stimulus_start_time = None
         self.stimulus_end_time = None  
 
-    def clear_layout(self, layout): # faite pour eviter que les images testé ne s'accumulent sur la page de l'éxaminateur
+    # faite pour eviter que les images testé ne s'accumulent sur la page de l'éxaminateur
+    def clear_layout(self, layout): 
         while layout.count():
             item = layout.takeAt(0)
             widget = item.widget()
@@ -162,6 +171,8 @@ class ImageSemanticMatchingTest(QMainWindow):
                 widget.setParent(None)
             elif child_layout:
                 self.clear_layout(child_layout)
+                
+    # Fonction pour retourner à l'interface principale aprés avoir cliquer sur "Retour à l'interface principale"
     def retour_interface(self):
         try:
             import subprocess
@@ -173,6 +184,7 @@ class ImageSemanticMatchingTest(QMainWindow):
         finally:
             self.close()
 
+    # Fonction qui lance le test aprés avoir cliquer sur "Valider et lancer le test", et affiche un message d'erreur si les paramètres ne sont pas valides
     def prepare_test(self):
         if self.patient_selector.currentText() == "-- Aucun --" or not all([
             self.contact_input.text().strip(),
@@ -234,6 +246,7 @@ class ImageSemanticMatchingTest(QMainWindow):
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setFocus()
 
+    # Fonction qui gérent les évenements comme le lancement du test ou encore du stimulus
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Type.KeyRelease and event.key() == Qt.Key.Key_Space:
             if not self.session_active and self.waiting_screen.isVisible():
@@ -251,11 +264,14 @@ class ImageSemanticMatchingTest(QMainWindow):
                 print("✅ Touche S détectée")
                 self.lancer_stimulus()
                 return True
-            elif event.key() == Qt.Key.Key_Space:
-                print("Espace détecté")
+            elif event.button() == Qt.MouseButton.RightButton:
+                print("Clique droit détectée")
+                self.lancer_stimulus()
+                return True
 
         return super().eventFilter(obj, event)
     
+    #Fonction qui lance les stimulis
     def lancer_stimulus(self):
         try:
             duree_ms = int(float(self.duree))
@@ -269,15 +285,18 @@ class ImageSemanticMatchingTest(QMainWindow):
 
         QTimer.singleShot(duree_ms, self.fin_stimulus)
     
+    #Fonction que y met fin et réinitialise les paramètres d'activation
     def fin_stimulus(self):
         self.stimulus_active = False
         self.stimulus_start_time = None
         self.stimulus_end_time = None
 
+    #Fonction qui annonce le temps qui a passé entre deux triplets
     def advance_by_timer(self):
         self.index += 1
         self.show_next_triplet()
 
+    #Fonction qui afficher les triplets
     def show_next_triplet(self):
         self.clear_layout(self.image_layout)
 
@@ -291,6 +310,7 @@ class ImageSemanticMatchingTest(QMainWindow):
         is_correct_map = {opt: os.path.basename(opt) == os.path.basename(correct_path) for opt in options}
         self.start_time = time.time()
 
+        # Fonction qui enregistre les infos de chaque essais pour être ensuite mis dans le csv
         def make_handler(selected_img, btn):
             def handler():
                 rt = round(time.time() - self.start_time, 3)
@@ -345,6 +365,7 @@ class ImageSemanticMatchingTest(QMainWindow):
         if self.mode == "Temps imparti":
             self.timer.start(self.timer_duration * 1000)
 
+    # Sauvegarde des infos des essaies dans le csv
     def save_results(self):
         self.timer.stop()
         df = pd.DataFrame(self.session_results)

@@ -1,5 +1,7 @@
 import sys
 import os
+import sqlite3
+from pathlib import Path
 from PyQt6.QtWidgets import (
     QApplication, QDialog, QLabel, QVBoxLayout, QScrollArea,
     QWidget, QGridLayout, QPushButton, QMessageBox
@@ -7,39 +9,43 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
 
-IMAGE_DIR = "./image_test_appariement"
+from constant import DB_FILE, DOSSIER_PATIENTS
+
+base_path = Path(__file__).resolve().parent / "image_test_appariement"
 TRIPLETS = [
-        ("./image_test_appariement/Image1.jpg", "./image_test_appariement/Image2.jpg", "./image_test_appariement/Image3.jpg"),
-        ("./image_test_appariement/Image4.jpg", "./image_test_appariement/Image5.jpg", "./image_test_appariement/Image6.jpg"),
-        ("./image_test_appariement/Image7.jpg", "./image_test_appariement/Image8.jpg", "./image_test_appariement/Image9.jpg"),
-        ("./image_test_appariement/Image10.jpg", "./image_test_appariement/Image11.jpg", "./image_test_appariement/Image12.jpg"),
-        ("./image_test_appariement/Image13.jpg", "./image_test_appariement/Image14.jpg", "./image_test_appariement/Image15.jpg"),
-        ("./image_test_appariement/Image16.jpg", "./image_test_appariement/Image17.jpg", "./image_test_appariement/Image18.jpg"),
-        ("./image_test_appariement/Image19.jpg", "./image_test_appariement/Image20.jpg", "./image_test_appariement/Image21.jpg"),
-        ("./image_test_appariement/Image22.jpg", "./image_test_appariement/Image23.jpg", "./image_test_appariement/Image24.jpg"),
-        ("./image_test_appariement/Image25.jpg", "./image_test_appariement/Image26.jpg", "./image_test_appariement/Image27.jpg"),
-        ("./image_test_appariement/Image28.jpg", "./image_test_appariement/Image29.jpg", "./image_test_appariement/Image30.jpg"),
-        ("./image_test_appariement/Image31.jpg", "./image_test_appariement/Image32.jpg", "./image_test_appariement/Image33.jpg"),
-        ("./image_test_appariement/Image34.jpg", "./image_test_appariement/Image35.jpg", "./image_test_appariement/Image36.jpg"),
-        ("./image_test_appariement/Image37.jpg", "./image_test_appariement/Image38.jpg", "./image_test_appariement/Image39.jpg"),
-        ("./image_test_appariement/Image40.jpg", "./image_test_appariement/Image41.jpg", "./image_test_appariement/Image42.jpg"),
-        ("./image_test_appariement/Image43.jpg", "./image_test_appariement/Image44.jpg", "./image_test_appariement/Image45.jpg"),
-        ("./image_test_appariement/Image46.jpg", "./image_test_appariement/Image47.jpg", "./image_test_appariement/Image48.jpg"),
-        ("./image_test_appariement/Image49.jpg", "./image_test_appariement/Image50.jpg", "./image_test_appariement/Image51.jpg"),
-        ("./image_test_appariement/Image52.jpg", "./image_test_appariement/Image53.jpg", "./image_test_appariement/Image54.jpg"),
-        ("./image_test_appariement/Image55.jpg", "./image_test_appariement/Image56.jpg", "./image_test_appariement/Image57.jpg"),
-        ("./image_test_appariement/Image58.jpg", "./image_test_appariement/Image59.jpg", "./image_test_appariement/Image60.jpg"),
-        ("./image_test_appariement/Image61.jpg", "./image_test_appariement/Image62.jpg", "./image_test_appariement/Image63.jpg"),
-        ("./image_test_appariement/Image64.jpg", "./image_test_appariement/Image65.jpg", "./image_test_appariement/Image66.jpg"),
-        ("./image_test_appariement/Image67.jpg", "./image_test_appariement/Image68.jpg", "./image_test_appariement/Image69.jpg"),
-        ("./image_test_appariement/Image70.jpg", "./image_test_appariement/Image71.jpg", "./image_test_appariement/Image72.jpg"),
-        ("./image_test_appariement/Image73.jpg", "./image_test_appariement/Image74.jpg", "./image_test_appariement/Image75.jpg"),
-        ("./image_test_appariement/Image76.jpg", "./image_test_appariement/Image77.jpg", "./image_test_appariement/Image78.jpg"),
-        ("./image_test_appariement/Image79.jpg", "./image_test_appariement/Image80.jpg", "./image_test_appariement/Image81.jpg"),
-        ("./image_test_appariement/Image82.jpg", "./image_test_appariement/Image83.jpg", "./image_test_appariement/Image84.jpg"),
-        ("./image_test_appariement/Image85.jpg", "./image_test_appariement/Image86.jpg", "./image_test_appariement/Image87.jpg"),
-        ("./image_test_appariement/Image88.jpg", "./image_test_appariement/Image89.jpg", "./image_test_appariement/Image90.jpg"),
+        (base_path/"Image1.jpg", base_path/"Image2.jpg", base_path/"Image3.jpg"),
+        (base_path/"Image4.jpg", base_path/"Image5.jpg", base_path/"Image6.jpg"),
+        (base_path/"Image7.jpg", base_path/"Image8.jpg", base_path/"Image9.jpg"),
+        (base_path/"Image10.jpg", base_path/"Image11.jpg", base_path/"Image12.jpg"),
+        (base_path/"Image13.jpg", base_path/"Image14.jpg", base_path/"Image15.jpg"),
+        (base_path/"Image16.jpg", base_path/"Image17.jpg", base_path/"Image18.jpg"),
+        (base_path/"Image19.jpg", base_path/"Image20.jpg", base_path/"Image21.jpg"),
+        (base_path/"Image22.jpg", base_path/"Image23.jpg", base_path/"Image24.jpg"),
+        (base_path/"Image25.jpg", base_path/"Image26.jpg", base_path/"Image27.jpg"),
+        (base_path/"Image28.jpg", base_path/"Image29.jpg", base_path/"Image30.jpg"),
+        (base_path/"Image31.jpg", base_path/"Image32.jpg", base_path/"Image33.jpg"),
+        (base_path/"Image34.jpg", base_path/"Image35.jpg", base_path/"Image36.jpg"),
+        (base_path/"Image37.jpg", base_path/"Image38.jpg", base_path/"Image39.jpg"),
+        (base_path/"Image40.jpg", base_path/"Image41.jpg", base_path/"Image42.jpg"),
+        (base_path/"Image43.jpg", base_path/"Image44.jpg", base_path/"Image45.jpg"),
+        (base_path/"Image46.jpg", base_path/"Image47.jpg", base_path/"Image48.jpg"),
+        (base_path/"Image49.jpg", base_path/"Image50.jpg", base_path/"Image51.jpg"),
+        (base_path/"Image52.jpg", base_path/"Image53.jpg", base_path/"Image54.jpg"),
+        (base_path/"Image55.jpg", base_path/"Image56.jpg", base_path/"Image57.jpg"),
+        (base_path/"Image58.jpg", base_path/"Image59.jpg", base_path/"Image60.jpg"),
+        (base_path/"Image61.jpg", base_path/"Image62.jpg", base_path/"Image63.jpg"),
+        (base_path/"Image64.jpg", base_path/"Image65.jpg", base_path/"Image66.jpg"),
+        (base_path/"Image67.jpg", base_path/"Image68.jpg", base_path/"Image69.jpg"),
+        (base_path/"Image70.jpg", base_path/"Image71.jpg", base_path/"Image72.jpg"),
+        (base_path/"Image73.jpg", base_path/"Image74.jpg", base_path/"Image75.jpg"),
+        (base_path/"Image76.jpg", base_path/"Image77.jpg", base_path/"Image78.jpg"),
+        (base_path/"Image79.jpg", base_path/"Image80.jpg", base_path/"Image81.jpg"),
+        (base_path/"Image82.jpg", base_path/"Image83.jpg", base_path/"Image84.jpg"),
+        (base_path/"Image85.jpg", base_path/"Image86.jpg", base_path/"Image87.jpg"),
+        (base_path/"Image88.jpg", base_path/"Image89.jpg", base_path/"Image90.jpg"),
     ]
+
+TRIPLETS =  [(str(a), str(b), str(c)) for (a, b, c) in TRIPLETS]
 
 class SelectionImages(QDialog):
     def __init__(self):
@@ -65,11 +71,12 @@ class SelectionImages(QDialog):
         self.setLayout(self.layout)
         self.afficher_images()
 
+    # Affiche tout les images disponibles pour la préselection
     def afficher_images(self):
         images = sorted(set(img for triplet in TRIPLETS for img in triplet))
         row = col = 0
         for img_name in images:
-            path = os.path.join(IMAGE_DIR, img_name)
+            path = os.path.join(base_path, img_name)
             label = QLabel()
             pixmap = QPixmap(path).scaled(120, 120, Qt.AspectRatioMode.KeepAspectRatio)
             label.setPixmap(pixmap)
@@ -83,17 +90,61 @@ class SelectionImages(QDialog):
                 col = 0
                 row += 1
 
+    # Définie l'affichage quand on sélectionne une image dans la présélection
     def generer_toggle_handler(self, label, img_name):
         def handler(event):
             current = self.selections[label]
             current["selected"] = not current["selected"]
             label.setStyleSheet("border: 2px solid green;" if current["selected"] else "border: 2px solid gray;")
         return handler
+    
+    # Enregistre la présélection dans un txt
+    def enregistrer_selection_txt(self):
+        selected_image = [info["image"] for info in self.selections.values() if info["selected"]]
+        patient_folder = os.path.join("Patients", self.patient_name)
+        os.makedirs(patient_folder, exist_ok=True)
+        with open(os.path.join(patient_folder, "selection_image_semantique.txt"), "w", encoding="utf-8") as f:
+            f.write(",".join(selected_image))
 
+    # Enregistre la présélection dans la BDD
+    def valider_selection(self):
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM selection_image_semantique WHERE patient_id = ?", (self.patient_id,))
+        for info in self.selections.values():
+            if info["selected"]:
+                cursor.execute(
+                    "INSERT INTO selection_image_semantique (patient_id, mot) VALUES (?, ?)",
+                    (self.patient_id, info["mot"])
+                )
+        conn.commit()
+        conn.close()
+        self.enregistrer_selection_txt()
+        QMessageBox.information(self, "Enregistré", "Sélection mise à jour avec succès.")
+        self.close()
+
+    # Creer un table dans la BDD si elle n'est pas déjà présente 
+    def creer_table_selection_image():
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS selection_image_semantique (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                patient_id INTEGER NOT NULL,
+                mot TEXT NOT NULL
+            )
+        ''')
+
+        conn.commit()
+        conn.close()
+        print("✅ Table 'selection_image_semantique' vérifiée/créée avec succès.")
+
+    # Enregistre le txt avec les infos de présélection
     def valider_selection(self):
         selected = [info["path"] for info in self.selections.values() if info["selected"]]
         os.makedirs("Patients", exist_ok=True)
-        with open("Patients/selection_images.txt", "w", encoding="utf-8") as f:
+        with open("Patients/selection_images_semantique.txt", "w", encoding="utf-8") as f:
             f.write(",".join(selected))
         QMessageBox.information(self, "Enregistré", "Sélection sauvegardée.")
         self.close()

@@ -91,6 +91,7 @@ tests = [
     ("écureuil", "maïs", "gland")
 ]
 
+# Classe de l'écran d'attente
 class WaitingScreen(QWidget):
     def __init__(self):
         super().__init__()
@@ -102,6 +103,7 @@ class WaitingScreen(QWidget):
         layout.addWidget(label)
         self.setLayout(layout)
 
+# Classe de l'écran du patient
 class SemanticMatchingPatient(QWidget):
     def __init__(self, tests):
         super().__init__()
@@ -123,6 +125,7 @@ class SemanticMatchingPatient(QWidget):
 
         self.show_triplet("Mot en attente", ["", ""], [lambda: None, lambda: None])
 
+    # Affiche les triplets d'image au patient
     def show_triplet(self, test_word, options, handlers):
         self.word_label.setText(test_word)
         self.btn1.setText(options[0])
@@ -138,7 +141,9 @@ class SemanticMatchingPatient(QWidget):
             pass
 
         self.btn1.clicked.connect(handlers[0])
-        self.btn2.clicked.connect(handlers[1]) 
+        self.btn2.clicked.connect(handlers[1])
+
+# Classe de l'écran de l'expérimentateur 
 class SemanticMatchingExaminateur(QMainWindow):
     def __init__(self, test_triplets):
         super().__init__()
@@ -153,6 +158,7 @@ class SemanticMatchingExaminateur(QMainWindow):
         self.init_ui()
         self.installEventFilter(self)
 
+    # Initialise l'Interface de l'expérimentateur     
     def init_ui(self):
         central = QWidget()
         self.setCentralWidget(central)
@@ -166,6 +172,7 @@ class SemanticMatchingExaminateur(QMainWindow):
         left_layout.addWidget(btn_preselection)
         left_layout.addWidget(btn_retour)
 
+        # Connexion au patients disponible pour le test
         self.patient_selector = QComboBox()
         self.patient_selector.addItem("-- Aucun --")
         patients_path = Path(__file__).resolve().parent.parent / "Patients"
@@ -174,6 +181,7 @@ class SemanticMatchingExaminateur(QMainWindow):
                 if folder.is_dir():
                     self.patient_selector.addItem(folder.name)
 
+        # Renseigné les paramètre 
         self.contact_input = QLineEdit()
         self.contact_input.setPlaceholderText("Contacts de stimulation")
         self.intensite_input = QLineEdit()
@@ -208,6 +216,7 @@ class SemanticMatchingExaminateur(QMainWindow):
         layout.addLayout(self.right_layout)
         central.setLayout(layout)
 
+    # Fonction pour lancer la préselection aprés avoir appuyer sur le bouton "Aller à la selection"
     def launch_preselection(self):
         try:
             script_path = Path(__file__).resolve().parent / "preselection_mots_semantique.py"
@@ -216,7 +225,7 @@ class SemanticMatchingExaminateur(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Impossible d'ouvrir l'interface de présélection : {e}")
 
-
+    # Initialise tout les paramètres 
     def init_test_state(self):
         self.current_index = 0
         self.click_times = []
@@ -236,7 +245,7 @@ class SemanticMatchingExaminateur(QMainWindow):
         self.stimulus_start_time = None
         self.stimulus_end_time = None   
 
-
+    # Fonction pour retourner à l'interface principale aprés avoir cliquer sur "Retour à l'interface principale"
     def retour_interface(self):
         try:
             import subprocess
@@ -248,6 +257,7 @@ class SemanticMatchingExaminateur(QMainWindow):
         finally:
             self.close()
 
+    # Fonction qui lance le test aprés avoir cliquer sur "Valider et lancer le test", et affiche un message d'erreur si les paramètres ne sont pas valides
     def prepare_test(self):
         if self.patient_selector.currentText() == "-- Aucun --" or not all([
             self.contact_input.text().strip(),
@@ -307,12 +317,13 @@ class SemanticMatchingExaminateur(QMainWindow):
         self.waiting_screen.show()
         self.patient_window.show()
 
-    #    Assure le focus clavier sur la fenêtre expérimentateur
+        # Assure le focus clavier sur la fenêtre expérimentateur
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.activateWindow()
         self.raise_()
         self.setFocus()
 
+    # Fonction qui gérent les évenements comme le lancement du test ou encore du stimulus
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Type.KeyRelease and event.key() == Qt.Key.Key_Space:
             if event.type() == QEvent.Type.KeyRelease:
@@ -332,12 +343,14 @@ class SemanticMatchingExaminateur(QMainWindow):
                 print("✅ Touche S détectée")
                 self.lancer_stimulus()
                 return True
-            elif event.key() == Qt.Key.Key_Space:
-                print("Espace détecté")
+            elif event.button() == Qt.MouseButton.RightButton:
+                print("Clique droit détectée")
+                self.lancer_stimulus()
+                return True
 
         return super().eventFilter(obj, event)
 
-    
+    #Fonction qui lance les stimulis   
     def lancer_stimulus(self):
         try:
             duree_ms = int(float(self.duree))
@@ -350,16 +363,19 @@ class SemanticMatchingExaminateur(QMainWindow):
         self.stimulus_end_time = self.stimulus_start_time + (duree_ms/1000)
 
         QTimer.singleShot(duree_ms, self.fin_stimulus)
-    
+
+    #Fonction que y met fin et réinitialise les paramètres d'activation
     def fin_stimulus(self):
         self.stimulus_active = False
         self.stimulus_start_time = None
         self.stimulus_end_time = None
 
+    #Fonction qui annonce le temps qui a passé entre deux triplets
     def advance_by_timer(self):
         self.index += 1
         self.show_next_triplet()
 
+    #Fonction qui afficher les triplets
     def show_next_triplet(self):
         for i in reversed(range(self.right_layout.count())):
             widget = self.right_layout.itemAt(i).widget()
@@ -385,6 +401,7 @@ class SemanticMatchingExaminateur(QMainWindow):
         for btn in (btn1, btn2):
             btn.setStyleSheet("font-size: 20px; padding: 15px;")
 
+        # Fonction qui enregistre les infos de chaque essais pour être ensuite mis dans le csv
         def make_handler(selected_option, selected_button):
             def handler():
                 rt = round(time.time() - self.start_time, 3)
@@ -426,6 +443,7 @@ class SemanticMatchingExaminateur(QMainWindow):
         if self.mode == "Temps imparti":
             self.timer.start(self.timer_duration * 1000)
 
+    # Sauvegarde des infos des essaies dans le csv
     def save_results(self):
         self.timer.stop()
         df = pd.DataFrame(self.session_results)
